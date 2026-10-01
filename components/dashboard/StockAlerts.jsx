@@ -1,0 +1,66 @@
+"use client";
+
+import { useSelector } from "react-redux";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, AlertOctagon } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function StockAlerts() {
+  const { products } = useSelector((state) => state.products);
+  const alertProducts = products.filter(
+    (p) => p.status === "out_of_stock" || p.status === "low_stock"
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold">Stock Alerts</CardTitle>
+          <Badge variant="destructive" className="text-[10px]">
+            {alertProducts.length}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-2">
+          {alertProducts.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">All products are in stock</p>
+          ) : (
+            alertProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, x: -5 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="flex items-center gap-2 p-2 rounded-lg bg-muted/50"
+              >
+                {product.status === "out_of_stock" ? (
+                  <AlertOctagon className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{product.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Stock: {product.stock} / Min: {product.minStock}
+                  </p>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] px-1.5 py-0 flex-shrink-0 ${
+                    product.status === "out_of_stock"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                  }`}
+                >
+                  {product.status === "out_of_stock" ? "Out" : "Low"}
+                </Badge>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
