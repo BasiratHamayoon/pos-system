@@ -3,8 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
-import { motion } from "framer-motion";
-import { Store, Zap, Shield, TrendingUp } from "lucide-react";
 
 export default function AuthLayout({ children }) {
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -16,81 +14,18 @@ export default function AuthLayout({ children }) {
     }
   }, [isAuthenticated, router]);
 
-  const features = [
-    { icon: Zap, title: "Lightning Fast", desc: "Process sales in seconds" },
-    { icon: Shield, title: "Secure & Reliable", desc: "Your data stays safe" },
-    { icon: TrendingUp, title: "Smart Analytics", desc: "Grow with insights" },
-  ];
-
   return (
-    <div className="min-h-screen w-full flex bg-background">
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden gradient-primary">
-        <div className="absolute inset-0 gradient-mesh opacity-50" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
-
-        <div className="relative z-10 flex flex-col justify-between p-10 text-white w-full">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2.5"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20">
-              <Store className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold">StorePOS</h2>
-              <p className="text-[10px] text-white/70 font-medium tracking-wider uppercase">Modern Business</p>
-            </div>
-          </motion.div>
-
-          <div className="space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <h1 className="text-4xl font-bold leading-tight tracking-tight mb-3 text-balance">
-                Run your store with ease & confidence
-              </h1>
-              <p className="text-sm text-white/80 max-w-md leading-relaxed">
-                A complete point of sale solution designed for modern wholesale and retail businesses.
-              </p>
-            </motion.div>
-
-            <div className="space-y-4">
-              {features.map((feature, i) => (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 + i * 0.1 }}
-                  className="flex items-start gap-3"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm ring-1 ring-white/20 shrink-0">
-                    <feature.icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold mb-0.5">{feature.title}</h3>
-                    <p className="text-xs text-white/70">{feature.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="text-xs text-white/60"
-          >
-            © 2025 StorePOS. All rights reserved.
-          </motion.div>
-        </div>
+    <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center p-4 sm:p-6 bg-background">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute top-1/3 -right-20 h-80 w-80 rounded-full bg-chart-2/20 blur-3xl" />
+        <div className="absolute -bottom-28 left-1/4 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,hsl(var(--primary)/0.08),transparent_45%),radial-gradient(circle_at_bottom_right,hsl(var(--chart-2)/0.08),transparent_40%)]" />
+        <div className="absolute inset-0 opacity-[0.35] dark:opacity-[0.18] bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-10 bg-background">
-        <div className="w-full max-w-[400px]">{children}</div>
+      <div className="relative z-10 w-full max-w-[400px]">
+        {children}
       </div>
     </div>
   );
