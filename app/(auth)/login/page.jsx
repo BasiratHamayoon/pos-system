@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginUser } from "@/store/actions/authActions";
 import { clearError } from "@/store/slices/authSlice";
+import { debounce } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,23 +22,30 @@ import {
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@storepos.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch();
   const router = useRouter();
-  const { isLoading, error } = useSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, router]);
+
+  const processSubmit = async (emailVal, passwordVal) => {
+    dispatch(clearError());
+    dispatch(loginUser({ email: emailVal, password: passwordVal }));
+  };
+
+  const debouncedSubmit = useCallback(debounce((e, p) => processSubmit(e, p), 500), []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(clearError());
-    dispatch(loginUser({ email, password }));
-    setTimeout(() => {
-      const { store } = require("@/store/store");
-      if (store.getState().auth.isAuthenticated) {
-        router.push("/dashboard");
-      }
-    }, 1200);
+    if (!email || !password) return;
+    debouncedSubmit(email, password);
   };
 
   return (
@@ -86,7 +94,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@storepos.com"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-9 h-10 text-sm rounded-xl bg-background"
@@ -150,28 +158,8 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="mt-4 pt-4 border-t border-border">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center mb-2">
-              Demo Credentials
-            </p>
-            <div className="rounded-xl bg-muted/50 border border-border p-2.5 space-y-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Email</span>
-                <span className="font-mono font-semibold">admin@storepos.com</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">Password</span>
-                <span className="font-mono font-semibold">admin123</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
-
-      <p className="text-center text-[11px] text-muted-foreground mt-4">
-        © 2025 StorePOS. All rights reserved.
-      </p>
     </motion.div>
   );
 }

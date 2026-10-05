@@ -1,72 +1,119 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import {
-  updateStoreInfo,
-  updateReceiptSettings,
-  updateNotificationSettings,
-} from "@/store/slices/settingsSlice";
+import { updateProfile, updatePassword as updatePasswordAction } from "@/store/actions/authActions";
+import { debounce } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Store,
-  Receipt,
-  Bell,
   Save,
   CheckCircle2,
   User,
-  Palette,
   Shield,
-  Globe,
+  AlertCircle,
+  Lock,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const settingsTabs = [
-  { id: "store", label: "Store Info", icon: Store, desc: "Business details" },
-  { id: "receipt", label: "Receipt", icon: Receipt, desc: "Print settings" },
-  { id: "notifications", label: "Notifications", icon: Bell, desc: "Alert preferences" },
-  { id: "appearance", label: "Appearance", icon: Palette, desc: "Theme & display" },
+  { id: "store", label: "Store & Profile Info", icon: Store, desc: "Business & Admin details" },
   { id: "security", label: "Security", icon: Shield, desc: "Password & access" },
 ];
 
 export default function SettingsPage() {
   const dispatch = useDispatch();
-  const router = useRouter();
-  const { storeInfo, receiptSettings, notificationSettings } = useSelector((s) => s.settings);
   const { user } = useSelector((s) => s.auth);
   const [activeTab, setActiveTab] = useState("store");
-  const [saved, setSaved] = useState(false);
+  
+  const [storeForm, setStoreForm] = useState({
+    name: "",
+    email: "",
+    storeName: "",
+    storeAddress: "",
+    storePhone: "",
+  });
 
-  const [storeForm, setStoreForm] = useState({ ...storeInfo });
-  const [receiptForm, setReceiptForm] = useState({ ...receiptSettings });
-  const [notifForm, setNotifForm] = useState({ ...notificationSettings });
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
 
-  const showSaved = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const [status, setStatus] = useState({ type: "", message: "" });
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setStoreForm({
+        name: user.name || "",
+        email: user.email || "",
+        storeName: user.storeName || "",
+        storeAddress: user.storeAddress || "",
+        storePhone: user.storePhone || "",
+      });
+    }
+  }, [user]);
+
+  const showMessage = (type, message) => {
+    setStatus({ type, message });
+    setTimeout(() => setStatus({ type: "", message: "" }), 3000);
   };
 
-  const handleSaveStore = () => {
-    dispatch(updateStoreInfo(storeForm));
-    showSaved();
+  const processProfileSubmit = async (data) => {
+    setIsLoading(true);
+    try {
+      await dispatch(updateProfile(data));
+      showMessage("success", "Profile updated successfully!");
+    } catch (err) {
+      showMessage("error", err || "Failed to update profile");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveReceipt = () => {
-    dispatch(updateReceiptSettings(receiptForm));
-    showSaved();
+  const processPasswordSubmit = async (data) => {
+    if (data.newPassword !== data.confirmPassword) {
+      showMessage("error", "New passwords do not match");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await updatePasswordAction({
+        oldPassword: data.oldPassword,
+        newPassword: data.newPassword
+      });
+      showMessage("success", "Password updated successfully!");
+      setPasswordForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      showMessage("error", err || "Failed to update password");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveNotif = () => {
-    dispatch(updateNotificationSettings(notifForm));
-    showSaved();
+  const debouncedProfileSubmit = useCallback(debounce((d) => processProfileSubmit(d), 500), [dispatch]);
+  const debouncedPasswordSubmit = useCallback(debounce((d) => processPasswordSubmit(d), 500), []);
+
+  const handleSaveStore = (e) => {
+    e.preventDefault();
+    debouncedProfileSubmit(storeForm);
+  };
+
+  const handleSavePassword = (e) => {
+    e.preventDefault();
+    debouncedPasswordSubmit(passwordForm);
   };
 
   const initials = user?.name
@@ -88,15 +135,20 @@ export default function SettingsPage() {
       </motion.div>
 
       <AnimatePresence>
-        {saved && (
+        {status.message && (
           <motion.div
             initial={{ opacity: 0, y: -10, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -10, height: 0 }}
-            className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900"
+            className={cn(
+              "flex items-center gap-2 p-3 rounded-xl border",
+              status.type === "success" 
+                ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900"
+                : "bg-destructive/10 text-destructive border-destructive/20"
+            )}
           >
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span className="text-xs font-semibold">Settings saved successfully!</span>
+            {status.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+            <span className="text-xs font-semibold">{status.message}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -131,6 +183,7 @@ export default function SettingsPage() {
                   return (
                     <button
                       key={tab.id}
+                      type="button"
                       onClick={() => setActiveTab(tab.id)}
                       className={cn(
                         "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left transition-all",
@@ -166,271 +219,168 @@ export default function SettingsPage() {
         >
           {activeTab === "store" && (
             <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Store className="h-5 w-5" />
+              <form onSubmit={handleSaveStore}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Store & Profile Info</CardTitle>
+                      <CardDescription className="text-xs mt-0.5">
+                        Update your administrator and business details
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-base">Store Information</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      Update your business details
-                    </CardDescription>
+                </CardHeader>
+                <Separator />
+                <CardContent className="pt-5 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Admin Name</Label>
+                      <Input
+                        value={storeForm.name}
+                        onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })}
+                        className="h-10 text-sm"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Admin Email</Label>
+                      <Input
+                        type="email"
+                        value={storeForm.email}
+                        onChange={(e) => setStoreForm({ ...storeForm, email: e.target.value })}
+                        className="h-10 text-sm"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Separator />
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">Store Name</Label>
                     <Input
-                      value={storeForm.name}
-                      onChange={(e) => setStoreForm({ ...storeForm, name: e.target.value })}
+                      value={storeForm.storeName}
+                      onChange={(e) => setStoreForm({ ...storeForm, storeName: e.target.value })}
                       className="h-10 text-sm"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Phone Number</Label>
-                    <Input
-                      value={storeForm.phone}
-                      onChange={(e) => setStoreForm({ ...storeForm, phone: e.target.value })}
-                      className="h-10 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Address</Label>
-                  <Input
-                    value={storeForm.address}
-                    onChange={(e) => setStoreForm({ ...storeForm, address: e.target.value })}
-                    className="h-10 text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Email</Label>
-                    <Input
-                      type="email"
-                      value={storeForm.email}
-                      onChange={(e) => setStoreForm({ ...storeForm, email: e.target.value })}
-                      className="h-10 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Currency</Label>
-                    <Input
-                      value={storeForm.currency}
-                      onChange={(e) => setStoreForm({ ...storeForm, currency: e.target.value })}
-                      className="h-10 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Tax Rate (%)</Label>
-                  <Input
-                    type="number"
-                    value={storeForm.taxRate}
-                    onChange={(e) =>
-                      setStoreForm({ ...storeForm, taxRate: parseFloat(e.target.value) || 0 })
-                    }
-                    className="h-10 text-sm w-40"
-                  />
-                </div>
-                <Separator />
-                <div className="flex justify-end">
-                  <Button onClick={handleSaveStore} size="sm" className="gap-2 h-9">
-                    <Save className="h-3.5 w-3.5" />
-                    Save Changes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {activeTab === "receipt" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Receipt className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Receipt Settings</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      Customize how your receipts look
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-5 space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Header Text</Label>
-                  <Input
-                    value={receiptForm.headerText}
-                    onChange={(e) => setReceiptForm({ ...receiptForm, headerText: e.target.value })}
-                    className="h-10 text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Footer Text</Label>
-                  <Input
-                    value={receiptForm.footerText}
-                    onChange={(e) => setReceiptForm({ ...receiptForm, footerText: e.target.value })}
-                    className="h-10 text-sm"
-                  />
-                </div>
-                <Separator />
-                <div className="space-y-3">
-                  {[
-                    { key: "showLogo", label: "Show Logo", desc: "Display store logo on receipts" },
-                    { key: "showPhone", label: "Show Phone", desc: "Display phone number on receipts" },
-                    { key: "showAddress", label: "Show Address", desc: "Display store address on receipts" },
-                  ].map((item) => (
-                    <div
-                      key={item.key}
-                      className="flex items-center justify-between p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors"
-                    >
-                      <div>
-                        <Label className="text-xs font-semibold">{item.label}</Label>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{item.desc}</p>
-                      </div>
-                      <Switch
-                        checked={receiptForm[item.key]}
-                        onCheckedChange={(c) => setReceiptForm({ ...receiptForm, [item.key]: c })}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Store Phone</Label>
+                      <Input
+                        value={storeForm.storePhone}
+                        onChange={(e) => setStoreForm({ ...storeForm, storePhone: e.target.value })}
+                        className="h-10 text-sm"
                       />
                     </div>
-                  ))}
-                </div>
-                <Separator />
-                <div className="flex justify-end">
-                  <Button onClick={handleSaveReceipt} size="sm" className="gap-2 h-9">
-                    <Save className="h-3.5 w-3.5" />
-                    Save Changes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {activeTab === "notifications" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Bell className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Notification Preferences</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      Configure your alerts
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-5 space-y-3">
-                {[
-                  { key: "lowStockAlert", label: "Low Stock Alerts", desc: "Notify when stock is running low" },
-                  { key: "outOfStockAlert", label: "Out of Stock Alerts", desc: "Notify when products are out of stock" },
-                  { key: "creditOverdueAlert", label: "Credit Overdue Alerts", desc: "Notify when credits are overdue" },
-                  { key: "dailyReport", label: "Daily Report Summary", desc: "Receive daily sales report via email" },
-                ].map((item) => (
-                  <div
-                    key={item.key}
-                    className="flex items-center justify-between p-3 rounded-xl bg-accent/30 hover:bg-accent/50 transition-colors"
-                  >
-                    <div>
-                      <Label className="text-xs font-semibold">{item.label}</Label>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{item.desc}</p>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Store Address</Label>
+                      <Input
+                        value={storeForm.storeAddress}
+                        onChange={(e) => setStoreForm({ ...storeForm, storeAddress: e.target.value })}
+                        className="h-10 text-sm"
+                      />
                     </div>
-                    <Switch
-                      checked={notifForm[item.key]}
-                      onCheckedChange={(c) => setNotifForm({ ...notifForm, [item.key]: c })}
-                    />
                   </div>
-                ))}
-                <Separator />
-                <div className="flex justify-end">
-                  <Button onClick={handleSaveNotif} size="sm" className="gap-2 h-9">
-                    <Save className="h-3.5 w-3.5" />
-                    Save Changes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {activeTab === "appearance" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Palette className="h-5 w-5" />
+                  
+                  <Separator />
+                  <div className="flex justify-end">
+                    <Button type="submit" size="sm" className="gap-2 h-9" disabled={isLoading}>
+                      <Save className="h-3.5 w-3.5" />
+                      {isLoading ? "Saving..." : "Save Changes"}
+                    </Button>
                   </div>
-                  <div>
-                    <CardTitle className="text-base">Appearance</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      Customize theme and layout
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-5">
-                <div className="text-center py-10">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mx-auto mb-3">
-                    <Palette className="h-7 w-7" />
-                  </div>
-                  <p className="text-sm font-semibold mb-1">Theme Customization</p>
-                  <p className="text-xs text-muted-foreground">
-                    Use the theme toggle in the header to switch between light and dark modes
-                  </p>
-                </div>
-              </CardContent>
+                </CardContent>
+              </form>
             </Card>
           )}
 
           {activeTab === "security" && (
             <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Shield className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Security</CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      Manage password and access
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-5 space-y-4">
-                <div className="p-4 rounded-xl bg-accent/30">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
-                      <Shield className="h-4 w-4" />
+              <form onSubmit={handleSavePassword}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Shield className="h-5 w-5" />
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold mb-0.5">Change Password</p>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        Update your password regularly to keep your account secure
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs"
-                        onClick={() => router.push("/forgot-password")}
+                    <div>
+                      <CardTitle className="text-base">Security</CardTitle>
+                      <CardDescription className="text-xs mt-0.5">
+                        Manage password and access
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <Separator />
+                <CardContent className="pt-5 space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Current Password</Label>
+                    <div className="relative group max-w-sm">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type={showOldPassword ? "text" : "password"}
+                        value={passwordForm.oldPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                        className="pl-9 pr-9 h-10 text-sm"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOldPassword(!showOldPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
-                        Change Password
-                      </Button>
+                        {showOldPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">New Password</Label>
+                    <div className="relative group max-w-sm">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordForm.newPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        className="pl-9 pr-9 h-10 text-sm"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Confirm New Password</Label>
+                    <div className="relative group max-w-sm">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        className="pl-9 h-10 text-sm"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+                  <div className="flex justify-end">
+                    <Button type="submit" size="sm" className="gap-2 h-9" disabled={isLoading}>
+                      <Save className="h-3.5 w-3.5" />
+                      {isLoading ? "Updating..." : "Update Password"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </form>
             </Card>
           )}
         </motion.div>

@@ -1,12 +1,14 @@
 "use client";
 
-import { Provider } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { store } from "@/store/store";
-import { useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useEffect, useState } from "react";
+import { loginSuccess } from "@/store/slices/authSlice";
 
-function ThemeInitializer({ children }) {
+function ThemeAndAuthInitializer({ children }) {
   const { mode } = useSelector((state) => state.theme);
+  const dispatch = useDispatch();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -15,13 +17,23 @@ function ThemeInitializer({ children }) {
     localStorage.setItem("theme", mode);
   }, [mode]);
 
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      dispatch(loginSuccess(JSON.parse(user)));
+    }
+    setMounted(true);
+  }, [dispatch]);
+
+  if (!mounted) return null;
+
   return children;
 }
 
 export default function Providers({ children }) {
   return (
     <Provider store={store}>
-      <ThemeInitializer>{children}</ThemeInitializer>
+      <ThemeAndAuthInitializer>{children}</ThemeAndAuthInitializer>
     </Provider>
   );
 }

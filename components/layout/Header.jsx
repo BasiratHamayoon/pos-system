@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
-import { logout } from "@/store/slices/authSlice";
+import { logoutUser } from "@/store/actions/authActions";
 import { toggleSidebar } from "@/store/slices/themeSlice";
 import {
   DropdownMenu,
@@ -49,7 +49,7 @@ export default function Header() {
 
   const confirmLogout = () => {
     setLogoutConfirmOpen(false);
-    dispatch(logout());
+    dispatch(logoutUser());
     router.push("/login");
   };
 
