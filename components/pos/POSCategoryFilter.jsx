@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -11,7 +10,7 @@ import {
 import { Tags, ChevronDown } from "lucide-react";
 
 export default function POSCategoryFilter({ categories, selected, onSelect }) {
-  const selectedCategory = categories.find((c) => c.id === selected);
+  const selectedCategory = categories.find((c) => c._id === selected);
   const label = selected === "all" ? "All Categories" : selectedCategory?.name || "All";
 
   return (
@@ -32,26 +31,16 @@ export default function POSCategoryFilter({ categories, selected, onSelect }) {
           <Tags className="h-3.5 w-3.5 mr-2" />
           All Categories
         </DropdownMenuItem>
-        {categories.map((cat) => (
+        {categories.filter(c => c.status === 'active').map((cat) => (
           <DropdownMenuItem
-            key={cat.id}
-            onClick={() => onSelect(cat.id)}
+            key={cat._id}
+            onClick={() => onSelect(cat._id)}
             className={cn(
-              "flex items-center justify-between text-xs font-medium cursor-pointer py-2",
-              selected === cat.id && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+              "flex items-center text-xs font-medium cursor-pointer py-2",
+              selected === cat._id && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
             )}
           >
             <span className="truncate">{cat.name}</span>
-            <span
-              className={cn(
-                "text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0",
-                selected === cat.id
-                  ? "bg-primary/20 text-primary"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              {cat.productCount}
-            </span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

@@ -1,8 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { dummyProducts } from "@/lib/dummyData";
 
 const initialState = {
-  products: dummyProducts,
+  products: [],
   selectedProduct: null,
   isLoading: false,
   error: null,
@@ -16,20 +15,29 @@ const productSlice = createSlice({
   name: "products",
   initialState,
   reducers: {
+    setProductsLoading(state) {
+      state.isLoading = true;
+      state.error = null;
+    },
     setProducts(state, action) {
+      state.isLoading = false;
       state.products = action.payload;
+    },
+    setProductsError(state, action) {
+      state.isLoading = false;
+      state.error = action.payload;
     },
     addProduct(state, action) {
       state.products.unshift(action.payload);
     },
-    updateProduct(state, action) {
-      const index = state.products.findIndex((p) => p.id === action.payload.id);
+    updateProductInList(state, action) {
+      const index = state.products.findIndex((p) => p._id === action.payload._id);
       if (index !== -1) {
         state.products[index] = action.payload;
       }
     },
-    deleteProduct(state, action) {
-      state.products = state.products.filter((p) => p.id !== action.payload);
+    deleteProductFromList(state, action) {
+      state.products = state.products.filter((p) => p._id !== action.payload);
     },
     setSelectedProduct(state, action) {
       state.selectedProduct = action.payload;
@@ -49,22 +57,21 @@ const productSlice = createSlice({
     setCurrentPage(state, action) {
       state.currentPage = action.payload;
     },
-    setLoading(state, action) {
-      state.isLoading = action.payload;
-    },
   },
 });
 
 export const {
+  setProductsLoading,
   setProducts,
+  setProductsError,
   addProduct,
-  updateProduct,
-  deleteProduct,
+  updateProductInList,
+  deleteProductFromList,
   setSelectedProduct,
   setSearchTerm,
   setFilterCategory,
   setFilterStatus,
   setCurrentPage,
-  setLoading,
 } = productSlice.actions;
+
 export default productSlice.reducer;

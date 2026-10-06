@@ -1,49 +1,33 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { dummySales } from "@/lib/dummyData";
 
 const initialState = {
-  sales: dummySales,
-  selectedSale: null,
-  isLoading: false,
-  error: null,
-  searchTerm: "",
-  filterStatus: "all",
-  filterPayment: "all",
-  currentPage: 1,
+  sales: [],
   cart: [],
   cartShopkeeper: null,
+  isLoading: false,
+  error: null,
 };
 
 const salesSlice = createSlice({
   name: "sales",
   initialState,
   reducers: {
+    setSalesLoading(state) {
+      state.isLoading = true;
+    },
     setSales(state, action) {
+      state.isLoading = false;
       state.sales = action.payload;
     },
-    addSale(state, action) {
+    setSalesError(state, action) {
+      state.isLoading = false;
+      state.error = action.payload;
+    },
+    addSaleToList(state, action) {
       state.sales.unshift(action.payload);
     },
-    setSelectedSale(state, action) {
-      state.selectedSale = action.payload;
-    },
-    setSalesSearchTerm(state, action) {
-      state.searchTerm = action.payload;
-      state.currentPage = 1;
-    },
-    setSalesFilterStatus(state, action) {
-      state.filterStatus = action.payload;
-      state.currentPage = 1;
-    },
-    setSalesFilterPayment(state, action) {
-      state.filterPayment = action.payload;
-      state.currentPage = 1;
-    },
-    setSalesCurrentPage(state, action) {
-      state.currentPage = action.payload;
-    },
     addToCart(state, action) {
-      const existing = state.cart.find((item) => item.id === action.payload.id);
+      const existing = state.cart.find((i) => i._id === action.payload._id);
       if (existing) {
         existing.qty += 1;
         existing.total = existing.qty * existing.price;
@@ -51,15 +35,15 @@ const salesSlice = createSlice({
         state.cart.push({ ...action.payload, qty: 1, total: action.payload.price });
       }
     },
-    removeFromCart(state, action) {
-      state.cart = state.cart.filter((item) => item.id !== action.payload);
-    },
     updateCartQty(state, action) {
-      const item = state.cart.find((item) => item.id === action.payload.id);
+      const item = state.cart.find((i) => i._id === action.payload.id);
       if (item) {
         item.qty = action.payload.qty;
         item.total = item.qty * item.price;
       }
+    },
+    removeFromCart(state, action) {
+      state.cart = state.cart.filter((i) => i._id !== action.payload);
     },
     clearCart(state) {
       state.cart = [];
@@ -72,17 +56,15 @@ const salesSlice = createSlice({
 });
 
 export const {
+  setSalesLoading,
   setSales,
-  addSale,
-  setSelectedSale,
-  setSalesSearchTerm,
-  setSalesFilterStatus,
-  setSalesFilterPayment,
-  setSalesCurrentPage,
+  setSalesError,
+  addSaleToList,
   addToCart,
-  removeFromCart,
   updateCartQty,
+  removeFromCart,
   clearCart,
   setCartShopkeeper,
 } = salesSlice.actions;
+
 export default salesSlice.reducer;

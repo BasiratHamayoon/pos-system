@@ -1,20 +1,57 @@
-import { addProduct, updateProduct, deleteProduct } from "../slices/productSlice";
-import { generateId } from "@/lib/utils";
+import api from '@/lib/api';
+import {
+  setProductsLoading,
+  setProducts,
+  setProductsError,
+  addProduct,
+  updateProductInList,
+  deleteProductFromList,
+} from '../slices/productSlice';
 
-export const createProduct = (productData) => (dispatch) => {
-  const product = {
-    ...productData,
-    id: generateId(),
-    createdAt: new Date().toISOString().split("T")[0],
-    status: productData.stock === 0 ? "out_of_stock" : productData.stock <= productData.minStock ? "low_stock" : "in_stock",
-  };
-  dispatch(addProduct(product));
+export const fetchProducts = () => async (dispatch) => {
+  dispatch(setProductsLoading());
+  try {
+    const { data } = await api.get('/products');
+    dispatch(setProducts(data));
+  } catch (error) {
+    dispatch(setProductsError(error.response?.data?.message || error.message));
+  }
 };
 
-export const editProduct = (productData) => (dispatch) => {
-  dispatch(updateProduct(productData));
+export const fetchProductById = async (id) => {
+  try {
+    const { data } = await api.get(`/products/${id}`);
+    return data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
 };
 
-export const removeProduct = (productId) => (dispatch) => {
-  dispatch(deleteProduct(productId));
+export const createProduct = (productData) => async (dispatch) => {
+  try {
+    const { data } = await api.post('/products', productData);
+    dispatch(addProduct(data));
+    return data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const editProduct = (id, productData) => async (dispatch) => {
+  try {
+    const { data } = await api.put(`/products/${id}`, productData);
+    dispatch(updateProductInList(data));
+    return data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const removeProduct = (id) => async (dispatch) => {
+  try {
+    await api.delete(`/products/${id}`);
+    dispatch(deleteProductFromList(id));
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
 };

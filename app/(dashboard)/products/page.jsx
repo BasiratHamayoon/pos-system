@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
-import { removeProduct } from "@/store/actions/productActions";
+import { fetchProducts, removeProduct } from "@/store/actions/productActions";
 import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import {
   AlertTriangle,
   XCircle,
   Trash2,
-  Eye,
+  Pencil,
   DollarSign,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -32,10 +32,15 @@ import { motion } from "framer-motion";
 export default function ProductsPage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { products } = useSelector((state) => state.products);
+  const { products, isLoading } = useSelector((state) => state.products);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   const totalProducts = products.length;
   const outOfStock = products.filter((p) => p.stock === 0).length;
@@ -50,8 +55,8 @@ export default function ProductsPage() {
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.barcode?.includes(searchTerm)
+      p.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.categoryName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = [
@@ -89,11 +94,22 @@ export default function ProductsPage() {
     },
   ];
 
-  const handleDelete = () => {
-    if (deleteConfirm) {
-      dispatch(removeProduct(deleteConfirm));
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleteLoading(true);
+    try {
+      await dispatch(removeProduct(deleteConfirm));
       setDeleteConfirm(null);
+    } catch (err) {
+      alert(err);
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const getUnitDisplay = (p) => {
+    if (!p.unit || p.unit === "pcs") return `${p.stock} pcs`;
+    return `${p.stock} x ${p.unitValue}${p.unit}`;
   };
 
   return (
@@ -152,7 +168,7 @@ export default function ProductsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search products by name, category, or barcode..."
+              placeholder="Search by name, brand, or category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-10 rounded-xl bg-background border-muted-foreground/20"
@@ -161,116 +177,99 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex-1 overflow-auto sidebar-scroll">
-          <table className="w-full text-sm text-left">
-            <thead className="sticky top-0 bg-muted/40 backdrop-blur-md z-10 border-b">
-              <tr>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  Product
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  Category
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  Price
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground text-center">
-                  Stock
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  Status
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredProducts.map((product) => (
-                <tr
-                  key={product.id}
-                  className="hover:bg-accent/50 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-                        <Package className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold truncate">{product.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">
-                          {product.barcode || "NO BARCODE"}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-[11px] font-medium">
-                      {product.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <p className="font-bold">{formatCurrency(product.price)}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Cost: {formatCurrency(product.costPrice)}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-bold">
-                      {product.stock} {product.unit}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant="secondary"
-                      className={
-                        product.stock === 0
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                          : product.stock <= product.minStock
-                          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                      }
-                    >
-                      {product.stock === 0
-                        ? "Out of Stock"
-                        : product.stock <= product.minStock
-                        ? "Low Stock"
-                        : "In Stock"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => router.push(`/products/${product.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteConfirm(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredProducts.length === 0 && (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="sticky top-0 bg-muted/40 backdrop-blur-md z-10 border-b">
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-12 text-center text-muted-foreground"
-                  >
-                    No products found. Adjust your search or add a new product.
-                  </td>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">Product</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">Brand</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">Category</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Price</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Stock</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">Status</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {filteredProducts.map((product) => (
+                  <tr key={product._id} className="hover:bg-accent/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                          <Package className="h-5 w-5" />
+                        </div>
+                        <p className="font-bold truncate">{product.name}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-semibold">{product.brand || "-"}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-[11px] font-medium">
+                        {product.categoryName}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <p className="font-bold">{formatCurrency(product.price)}</p>
+                      <p className="text-[10px] text-muted-foreground">Cost: {formatCurrency(product.costPrice)}</p>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-bold text-xs">{getUnitDisplay(product)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        variant="secondary"
+                        className={
+                          product.status === "out_of_stock"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : product.status === "low_stock"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        }
+                      >
+                        {product.status === "out_of_stock"
+                          ? "Out of Stock"
+                          : product.status === "low_stock"
+                          ? "Low Stock"
+                          : "In Stock"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => router.push(`/products/${product._id}`)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteConfirm(product._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredProducts.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                      No products found. Adjust your search or add a new product.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
 
@@ -280,9 +279,7 @@ export default function ProductsPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-3">
               <AlertTriangle className="h-6 w-6" />
             </div>
-            <DialogTitle className="text-base font-bold">
-              Delete Product
-            </DialogTitle>
+            <DialogTitle className="text-base font-bold">Delete Product</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
               Are you sure? This action cannot be undone.
             </DialogDescription>
@@ -298,9 +295,10 @@ export default function ProductsPage() {
             <Button
               variant="destructive"
               onClick={handleDelete}
+              disabled={deleteLoading}
               className="flex-1 h-10 text-xs font-bold rounded-xl"
             >
-              Delete
+              {deleteLoading ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
-import { removeCategory } from "@/store/actions/categoryActions";
+import { fetchCategories, removeCategory } from "@/store/actions/categoryActions";
+import { fetchProducts } from "@/store/actions/productActions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import {
   CheckCircle2,
   Package,
   Trash2,
-  Eye,
+  Pencil,
   AlertTriangle,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -31,11 +32,17 @@ import { motion } from "framer-motion";
 export default function CategoriesPage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { categories } = useSelector((state) => state.categories);
+  const { categories, isLoading } = useSelector((state) => state.categories);
   const { products } = useSelector((state) => state.products);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchCategories());
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   const totalCategories = categories.length;
   const activeCategories = categories.filter((c) => c.status === "active").length;
@@ -43,7 +50,7 @@ export default function CategoriesPage() {
   const enrichedCategories = categories.map((cat) => ({
     ...cat,
     actualProductCount: products.filter(
-      (p) => p.categoryId === cat.id || p.category === cat.name
+      (p) => String(p.category) === String(cat._id) || p.categoryName === cat.name
     ).length,
   }));
 
@@ -85,10 +92,16 @@ export default function CategoriesPage() {
     },
   ];
 
-  const handleDelete = () => {
-    if (deleteConfirm) {
-      dispatch(removeCategory(deleteConfirm));
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleteLoading(true);
+    try {
+      await dispatch(removeCategory(deleteConfirm));
       setDeleteConfirm(null);
+    } catch (err) {
+      alert(err);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -157,96 +170,102 @@ export default function CategoriesPage() {
         </div>
 
         <div className="flex-1 overflow-auto sidebar-scroll">
-          <table className="w-full text-sm text-left">
-            <thead className="sticky top-0 bg-muted/40 backdrop-blur-md z-10 border-b">
-              <tr>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  Category Name
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  Description
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground text-center">
-                  Products
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground">
-                  Status
-                </th>
-                <th className="px-4 py-3 font-semibold text-muted-foreground text-right">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredCategories.map((category) => (
-                <tr
-                  key={category.id}
-                  className="hover:bg-accent/50 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-                        <Tags className="h-5 w-5" />
-                      </div>
-                      <p className="font-bold">{category.name}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="text-xs text-muted-foreground truncate max-w-xs">
-                      {category.description || "No description provided"}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge variant="outline" className="font-bold">
-                      {category.actualProductCount} Items
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant="secondary"
-                      className={
-                        category.status === "active"
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                          : "bg-muted text-muted-foreground"
-                      }
-                    >
-                      {category.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-primary hover:bg-primary/10"
-                        onClick={() => router.push(`/categories/${category.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        onClick={() => setDeleteConfirm(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredCategories.length === 0 && (
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="sticky top-0 bg-muted/40 backdrop-blur-md z-10 border-b">
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-12 text-center text-muted-foreground"
-                  >
-                    No categories found. Adjust your search or create a new category.
-                  </td>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">
+                    Category Name
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">
+                    Description
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-center">
+                    Products
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-right">
+                    Actions
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {filteredCategories.map((category) => (
+                  <tr
+                    key={category._id}
+                    className="hover:bg-accent/50 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                          <Tags className="h-5 w-5" />
+                        </div>
+                        <p className="font-bold">{category.name}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-xs text-muted-foreground truncate max-w-xs">
+                        {category.description || "No description provided"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge variant="outline" className="font-bold">
+                        {category.actualProductCount} Items
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        variant="secondary"
+                        className={
+                          category.status === "active"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {category.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:bg-primary/10"
+                          onClick={() => router.push(`/categories/${category._id}`)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => setDeleteConfirm(category._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredCategories.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-12 text-center text-muted-foreground"
+                    >
+                      No categories found. Adjust your search or create a new category.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
 
@@ -260,8 +279,7 @@ export default function CategoriesPage() {
               Delete Category
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Are you sure? Removing a category will not delete its products, but
-              they will become uncategorized.
+              Are you sure? Removing a category might affect its linked products.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-row gap-2 mt-4 sm:justify-center">
@@ -275,9 +293,10 @@ export default function CategoriesPage() {
             <Button
               variant="destructive"
               onClick={handleDelete}
+              disabled={deleteLoading}
               className="flex-1 h-10 text-xs font-bold rounded-xl"
             >
-              Delete
+              {deleteLoading ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

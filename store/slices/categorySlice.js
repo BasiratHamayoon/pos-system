@@ -1,8 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { dummyCategories } from "@/lib/dummyData";
 
 const initialState = {
-  categories: dummyCategories,
+  categories: [],
   selectedCategory: null,
   isLoading: false,
   error: null,
@@ -14,20 +13,29 @@ const categorySlice = createSlice({
   name: "categories",
   initialState,
   reducers: {
+    setCategoriesLoading(state) {
+      state.isLoading = true;
+      state.error = null;
+    },
     setCategories(state, action) {
+      state.isLoading = false;
       state.categories = action.payload;
+    },
+    setCategoriesError(state, action) {
+      state.isLoading = false;
+      state.error = action.payload;
     },
     addCategory(state, action) {
       state.categories.unshift(action.payload);
     },
-    updateCategory(state, action) {
-      const index = state.categories.findIndex((c) => c.id === action.payload.id);
+    updateCategoryInList(state, action) {
+      const index = state.categories.findIndex((c) => c._id === action.payload._id);
       if (index !== -1) {
         state.categories[index] = action.payload;
       }
     },
-    deleteCategory(state, action) {
-      state.categories = state.categories.filter((c) => c.id !== action.payload);
+    deleteCategoryFromList(state, action) {
+      state.categories = state.categories.filter((c) => c._id !== action.payload);
     },
     setSelectedCategory(state, action) {
       state.selectedCategory = action.payload;
@@ -43,12 +51,15 @@ const categorySlice = createSlice({
 });
 
 export const {
+  setCategoriesLoading,
   setCategories,
+  setCategoriesError,
   addCategory,
-  updateCategory,
-  deleteCategory,
+  updateCategoryInList,
+  deleteCategoryFromList,
   setSelectedCategory,
   setCategorySearchTerm,
   setCategoryCurrentPage,
 } = categorySlice.actions;
+
 export default categorySlice.reducer;

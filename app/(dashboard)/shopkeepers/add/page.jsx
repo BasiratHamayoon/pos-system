@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { createShopkeeper } from "@/store/actions/shopkeeperActions";
+import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, UserPlus } from "lucide-react";
+import { ArrowLeft, Save, UserPlus, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AddShopkeeperPage() {
@@ -21,11 +22,27 @@ export default function AddShopkeeperPage() {
     phone: "",
     address: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const processSubmit = async (data) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      await dispatch(createShopkeeper(data));
+      router.push("/shopkeepers");
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const debouncedSubmit = useCallback(debounce((d) => processSubmit(d), 500), [dispatch]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    dispatch(createShopkeeper(formData));
-    router.push("/shopkeepers");
+    debouncedSubmit(formData);
   };
 
   return (
@@ -57,12 +74,19 @@ export default function AddShopkeeperPage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-xs border border-destructive/20">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Owner Name *</Label>
                   <Input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl bg-muted/30" placeholder="e.g. Ahmed Khan" />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Shop / Business Name *</Label>
                   <Input required value={formData.shopName} onChange={(e) => setFormData({ ...formData, shopName: e.target.value })} className="h-11 rounded-xl bg-muted/30" placeholder="e.g. Khan General Store" />
@@ -72,7 +96,7 @@ export default function AddShopkeeperPage() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Phone Number *</Label>
                   <Input required type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="h-11 rounded-xl bg-muted/30" placeholder="0300-1234567" />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Store Address</Label>
                   <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="h-11 rounded-xl bg-muted/30" placeholder="Main Bazar, Shop 12" />
@@ -83,8 +107,8 @@ export default function AddShopkeeperPage() {
                 <Button type="button" variant="outline" onClick={() => router.push("/shopkeepers")} className="h-11 px-6 rounded-xl font-bold">
                   Cancel
                 </Button>
-                <Button type="submit" className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20">
-                  <Save className="h-4 w-4" /> Save Profile
+                <Button type="submit" className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20" disabled={isLoading}>
+                  <Save className="h-4 w-4" /> {isLoading ? "Saving..." : "Save Profile"}
                 </Button>
               </div>
             </CardContent>

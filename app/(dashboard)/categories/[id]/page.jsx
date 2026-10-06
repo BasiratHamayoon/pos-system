@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState, useEffect, useCallback } from "react";
+import { useDispatch } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
-import { editCategory } from "@/store/actions/categoryActions";
+import { fetchCategoryById, editCategory } from "@/store/actions/categoryActions";
+import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +16,53 @@ export default function EditCategoryPage() {
   const router = useRouter();
   const params = useParams();
   const dispatch = useDispatch();
-  const { categories } = useSelector((state) => state.categories);
 
   const [formData, setFormData] = useState(null);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const category = categories.find((c) => c.id === params.id);
-    if (category) {
-      setFormData(category);
+    const loadCategory = async () => {
+      try {
+        const category = await fetchCategoryById(params.id);
+        setFormData(category);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setFetchLoading(false);
+      }
+    };
+    loadCategory();
+  }, [params.id]);
+
+  const processSubmit = async (data) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      await dispatch(editCategory(params.id, data));
+      router.push("/categories");
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [categories, params.id]);
+  };
+
+  const debouncedSubmit = useCallback(debounce((d) => processSubmit(d), 500), [dispatch, params.id]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    debouncedSubmit(formData);
+  };
+
+  if (fetchLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!formData) {
     return (
@@ -35,12 +73,6 @@ export default function EditCategoryPage() {
       </div>
     );
   }
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    dispatch(editCategory(formData));
-    router.push("/categories");
-  };
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto pb-10">
@@ -67,9 +99,16 @@ export default function EditCategoryPage() {
                 </div>
                 <div>
                   <h3 className="font-bold">Category Details</h3>
-                  <p className="text-xs text-muted-foreground">ID: {formData.id}</p>
+                  <p className="text-xs text-muted-foreground">ID: {formData._id}</p>
                 </div>
               </div>
+
+              {error && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-xs border border-destructive/20">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
 
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -84,7 +123,7 @@ export default function EditCategoryPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
-                  <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50">
+                  <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
@@ -95,8 +134,8 @@ export default function EditCategoryPage() {
                 <Button type="button" variant="outline" onClick={() => router.push("/categories")} className="h-11 px-6 rounded-xl font-bold">
                   Cancel
                 </Button>
-                <Button type="submit" className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20">
-                  <Save className="h-4 w-4" /> Save Changes
+                <Button type="submit" className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20" disabled={isLoading}>
+                  <Save className="h-4 w-4" /> {isLoading ? "Updating..." : "Save Changes"}
                 </Button>
               </div>
             </CardContent>

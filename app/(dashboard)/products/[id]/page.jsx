@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
-import { editProduct } from "@/store/actions/productActions";
+import { fetchProductById, editProduct } from "@/store/actions/productActions";
+import { fetchCategories } from "@/store/actions/categoryActions";
+import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,23 +17,79 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const dispatch = useDispatch();
-  const { products } = useSelector((state) => state.products);
   const { categories } = useSelector((state) => state.categories);
 
   const [formData, setFormData] = useState(null);
+  const [fetchLoading, setFetchLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const product = products.find((p) => p.id === params.id);
-    if (product) {
-      setFormData({
-        ...product,
-        price: product.price.toString(),
-        costPrice: product.costPrice.toString(),
-        stock: product.stock.toString(),
-        minStock: product.minStock.toString(),
-      });
+    if (categories.length === 0) {
+      dispatch(fetchCategories());
     }
-  }, [products, params.id]);
+
+    const loadProduct = async () => {
+      try {
+        const product = await fetchProductById(params.id);
+        setFormData({
+          ...product,
+          categoryId: product.category,
+          price: product.price.toString(),
+          costPrice: product.costPrice.toString(),
+          stock: product.stock.toString(),
+          minStock: product.minStock.toString(),
+          unitValue: product.unitValue.toString(),
+        });
+      } catch (err) {
+        setError(err);
+      } font: {
+        setFetchLoading(false);
+      }
+    };
+    loadProduct();
+  }, [dispatch, params.id, categories.length]);
+
+  const processSubmit = async (data) => {
+    setIsLoading(true);
+    setError("");
+
+    const payload = {
+      name: data.name,
+      brand: data.brand,
+      categoryId: data.categoryId,
+      price: parseFloat(data.price) || 0,
+      costPrice: parseFloat(data.costPrice) || 0,
+      stock: parseInt(data.stock) || 0,
+      minStock: parseInt(data.minStock) || 0,
+      unitValue: parseFloat(data.unitValue) || 1,
+      unit: data.unit,
+    };
+
+    try {
+      await dispatch(editProduct(params.id, payload));
+      router.push("/products");
+    } catch (err) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const debouncedSubmit = useCallback(debounce((d) => processSubmit(d), 500), [dispatch, params.id]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    debouncedSubmit(formData);
+  };
+
+  if (fetchLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!formData) {
     return (
@@ -42,24 +100,6 @@ export default function EditProductPage() {
       </div>
     );
   }
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const category = categories.find((c) => c.id === formData.categoryId) || categories.find((c) => c.name === formData.category);
-    
-    const updatedProduct = {
-      ...formData,
-      categoryId: category?.id || formData.categoryId,
-      category: category?.name || formData.category,
-      price: parseFloat(formData.price) || 0,
-      costPrice: parseFloat(formData.costPrice) || 0,
-      stock: parseInt(formData.stock) || 0,
-      minStock: parseInt(formData.minStock) || 0,
-    };
-
-    dispatch(editProduct(updatedProduct));
-    router.push("/products");
-  };
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-10">
@@ -86,23 +126,59 @@ export default function EditProductPage() {
                 </div>
                 <div>
                   <h3 className="font-bold">Product Information</h3>
-                  <p className="text-xs text-muted-foreground">ID: {formData.id}</p>
+                  <p className="text-xs text-muted-foreground">ID: {formData._id}</p>
                 </div>
               </div>
+
+              {error && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-xs border border-destructive/20">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Product Name *</Label>
                   <Input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl bg-muted/30" />
                 </div>
+
                 <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Brand</Label>
+                  <Input value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} className="h-11 rounded-xl bg-muted/30" />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category *</Label>
-                  <select required value={formData.categoryId || categories.find(c => c.name === formData.category)?.id} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50">
+                  <select required value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <option value="" disabled>Select a category...</option>
                     {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2 p-4 rounded-xl bg-accent/30 border border-dashed">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-primary">Unit & Packaging Size</Label>
+                  <p className="text-[11px] text-muted-foreground">Define the size of a single pack/piece</p>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground">Size / Value</Label>
+                      <Input type="number" step="0.01" min="0" value={formData.unitValue} onChange={(e) => setFormData({ ...formData, unitValue: e.target.value })} className="h-10 rounded-lg bg-background" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground">Unit Type</Label>
+                      <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <option value="pcs">Pieces (pcs)</option>
+                        <option value="pack">Pack</option>
+                        <option value="box">Box</option>
+                        <option value="kg">Kilograms (kg)</option>
+                        <option value="g">Grams (g)</option>
+                        <option value="l">Liters (L)</option>
+                        <option value="ml">Milliliters (ml)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -112,6 +188,7 @@ export default function EditProductPage() {
                     <Input required type="number" step="0.01" min="0" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="pl-10 h-11 rounded-xl bg-muted/30" />
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cost Price *</Label>
                   <div className="relative">
@@ -124,25 +201,10 @@ export default function EditProductPage() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Stock *</Label>
                   <Input required type="number" min="0" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: e.target.value })} className="h-11 rounded-xl bg-muted/30" />
                 </div>
+
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Minimum Stock Alert</Label>
                   <Input type="number" min="0" value={formData.minStock} onChange={(e) => setFormData({ ...formData, minStock: e.target.value })} className="h-11 rounded-xl bg-muted/30" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Barcode / SKU</Label>
-                  <Input value={formData.barcode} onChange={(e) => setFormData({ ...formData, barcode: e.target.value })} className="h-11 rounded-xl bg-muted/30 font-mono" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Unit</Label>
-                  <select value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50">
-                    <option value="pcs">Pieces (pcs)</option>
-                    <option value="kg">Kilograms (kg)</option>
-                    <option value="g">Grams (g)</option>
-                    <option value="l">Liters (L)</option>
-                    <option value="ml">Milliliters (ml)</option>
-                    <option value="box">Box</option>
-                  </select>
                 </div>
               </div>
 
@@ -150,8 +212,8 @@ export default function EditProductPage() {
                 <Button type="button" variant="outline" onClick={() => router.push("/products")} className="h-11 px-6 rounded-xl font-bold">
                   Cancel
                 </Button>
-                <Button type="submit" className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20">
-                  <Save className="h-4 w-4" /> Save Changes
+                <Button type="submit" className="h-11 px-6 rounded-xl font-bold gap-2 shadow-lg shadow-primary/20" disabled={isLoading}>
+                  <Save className="h-4 w-4" /> {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </CardContent>
