@@ -1,49 +1,39 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { dummyInvoices } from "@/lib/dummyData";
 
 const initialState = {
-  invoices: dummyInvoices,
+  invoices: [],
   selectedInvoice: null,
   isLoading: false,
   error: null,
-  searchTerm: "",
-  filterStatus: "all",
-  currentPage: 1,
 };
 
 const invoiceSlice = createSlice({
   name: "invoices",
   initialState,
   reducers: {
+    setInvoicesLoading(state) {
+      state.isLoading = true;
+      state.error = null;
+    },
     setInvoices(state, action) {
+      state.isLoading = false;
       state.invoices = action.payload;
     },
-    addInvoice(state, action) {
-      state.invoices.unshift(action.payload);
+    setInvoicesError(state, action) {
+      state.isLoading = false;
+      state.error = action.payload;
     },
     setSelectedInvoice(state, action) {
       state.selectedInvoice = action.payload;
-    },
-    setInvoiceSearchTerm(state, action) {
-      state.searchTerm = action.payload;
-      state.currentPage = 1;
-    },
-    setInvoiceFilterStatus(state, action) {
-      state.filterStatus = action.payload;
-      state.currentPage = 1;
-    },
-    setInvoiceCurrentPage(state, action) {
-      state.currentPage = action.payload;
     },
   },
 });
 
 export const {
+  setInvoicesLoading,
   setInvoices,
-  addInvoice,
+  setInvoicesError,
   setSelectedInvoice,
-  setInvoiceSearchTerm,
-  setInvoiceFilterStatus,
-  setInvoiceCurrentPage,
 } = invoiceSlice.actions;
+
 export default invoiceSlice.reducer;

@@ -3,29 +3,45 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
-import { formatCurrency, formatDateTime, cn } from "@/lib/utils";
+import { fetchInvoiceById } from "@/store/actions/invoiceActions";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, AlertCircle, MapPin, Phone, Store } from "lucide-react";
+import { ArrowLeft, Printer, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { invoices } = useSelector((state) => state.invoices);
-  const { storeInfo } = useSelector((state) => state.settings);
+  const { user } = useSelector((state) => state.auth);
 
   const [invoice, setInvoice] = useState(null);
+  const [fetchLoading, setFetchLoading] = useState(true);
 
   useEffect(() => {
-    const foundInvoice = invoices.find((inv) => String(inv.id) === String(params.id) || inv.invoiceNo === params.id);
-    if (foundInvoice) {
-      setInvoice(foundInvoice);
-    }
-  }, [invoices, params.id]);
+    const loadInvoice = async () => {
+      try {
+        const data = await fetchInvoiceById(params.id);
+        setInvoice(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setFetchLoading(false);
+      }
+    };
+    loadInvoice();
+  }, [params.id]);
+
+  if (fetchLoading) {
+    return (
+      <div className="flex justify-center items-center h-full py-16">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!invoice) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3">
+      <div className="flex flex-col items-center justify-center h-full gap-3 py-16">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
           <AlertCircle className="h-7 w-7 text-muted-foreground" />
         </div>
@@ -38,7 +54,7 @@ export default function InvoiceDetailPage() {
     );
   }
 
-  const dateObj = new Date(invoice.date);
+  const dateObj = new Date(invoice.date || invoice.createdAt);
   const formattedDate = `${dateObj.getDate().toString().padStart(2, "0")}/${(dateObj.getMonth() + 1).toString().padStart(2, "0")}/${dateObj.getFullYear()}`;
   const formattedTime = `${dateObj.getHours().toString().padStart(2, "0")}:${dateObj.getMinutes().toString().padStart(2, "0")}:${dateObj.getSeconds().toString().padStart(2, "0")}`;
 
@@ -59,35 +75,33 @@ export default function InvoiceDetailPage() {
         </Button>
       </motion.div>
 
-      <div className="flex-1 overflow-y-auto sidebar-scroll pb-10 flex justify-center print:overflow-visible print:p-0">
-        <div className="bg-white w-full max-w-[850px] shadow-sm rounded-xl text-black flex flex-col p-6 sm:p-10 border print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:p-0" style={{ fontFamily: '"Courier New", Courier, monospace', fontSize: "12px" }}>
-          
+      <div className="flex-1 overflow-y-auto sidebar-scroll pb-10 flex justify-center print:p-0 print:overflow-visible print:block">
+        <div
+          className="bg-white w-full max-w-[850px] shadow-sm rounded-xl text-black flex flex-col p-6 sm:p-10 border print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:p-0"
+          style={{ fontFamily: '"Courier New", Courier, monospace', fontSize: "12px" }}
+        >
           <div className="mb-6">
             <h1 className="text-[18px] sm:text-[20px] font-bold tracking-tight mb-1">
-              {storeInfo?.name || "StorePOS"}
+              {user?.storeName || user?.name || "StorePOS"}
             </h1>
-            <p className="font-bold">{storeInfo?.address || ""}</p>
-            <p className="font-bold">PH- {storeInfo?.phone || ""}</p>
+            <p className="font-bold">{user?.storeAddress || ""}</p>
+            <p className="font-bold">PH- {user?.storePhone || ""}</p>
           </div>
 
           <div className="flex justify-center mb-4">
-            <div className="border-2 border-black px-6 py-1 font-bold tracking-[0.3em] text-base">
-              INVOICE
-            </div>
+            <div className="border-2 border-black px-6 py-1 font-bold tracking-[0.3em] text-base">INVOICE</div>
           </div>
 
           <div className="flex justify-end text-[11px] sm:text-[12px] mb-2 font-bold">
-            <span>
-              Page. No : <span className="ml-8">1</span>
-            </span>
+            <span>Page. No : <span className="ml-8">1</span></span>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-0 mb-4 w-full border-2 border-black rounded-sm">
             <div className="w-full sm:w-[60%] border-b-2 sm:border-b-0 sm:border-r-2 border-black flex flex-col">
               {[
                 { label: "INVOICE NO", value: invoice.invoiceNo },
-                { label: "PARTY CODE", value: invoice.partyCode || (invoice.shopkeeperId ? invoice.shopkeeperId.slice(-4) : "CASH") },
-                { label: "PARTY NAME", value: invoice.shopName || "Walk-in" },
+                { label: "PARTY CODE", value: invoice.shopkeeper ? String(invoice.shopkeeper).slice(-4) : "CASH" },
+                { label: "PARTY NAME", value: invoice.shopName || invoice.shopkeeperName },
                 { label: "ADDRESS", value: invoice.address || "Walk-in" },
                 { label: "CONTACT #", value: invoice.phone || "" },
                 { label: "CNIC #", value: "" },
@@ -132,25 +146,22 @@ export default function InvoiceDetailPage() {
             <tbody>
               {invoice.items && invoice.items.length > 0 ? invoice.items.map((item, idx) => (
                 <tr key={idx} className="border-b border-gray-300 last:border-b-0">
-                  <td className="border-r border-black p-2">{item.code || `31${idx}`}</td>
+                  <td className="border-r border-black p-2">{item.code || String(item.productId || "").slice(-3) || `31${idx}`}</td>
                   <td className="border-r border-black p-2 text-left pl-2 font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[250px]">
                     {item.name}
+                    {item.unit && item.unit !== 'pcs' && ` (${item.unitValue}${item.unit})`}
                   </td>
                   <td className="border-r border-black p-2">***.***</td>
-                  <td className="border-r border-black p-2 text-right pr-2">
-                    {Number(item.price).toFixed(3)}
-                  </td>
+                  <td className="border-r border-black p-2 text-right pr-2">{Number(item.price).toFixed(3)}</td>
                   <td className="border-r border-black p-2 font-bold">{item.qty}</td>
                   <td className="border-r border-black p-2"></td>
                   <td className="border-r border-black p-2"></td>
                   <td className="border-r border-black p-2"></td>
-                  <td className="p-2 text-right pr-3 font-bold">
-                    {(Number(item.qty) * Number(item.price)).toFixed(2)}
-                  </td>
+                  <td className="p-2 text-right pr-3 font-bold">{(Number(item.qty) * Number(item.price)).toFixed(2)}</td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={9} className="p-8 font-bold">No itemized details available for this invoice summary.</td>
+                  <td colSpan={9} className="p-8 font-bold">No itemized details available.</td>
                 </tr>
               )}
             </tbody>
@@ -166,9 +177,7 @@ export default function InvoiceDetailPage() {
               </div>
             </div>
             <div className="flex w-[18%]">
-              <div className="font-bold p-2 w-full flex items-center justify-center tracking-wider">
-                DISCOUNT
-              </div>
+              <div className="font-bold p-2 w-full flex items-center justify-center tracking-wider">DISCOUNT</div>
             </div>
             <div className="flex w-[12%]">
               <div className="p-2 w-full flex items-center justify-end font-bold pr-2">
@@ -184,9 +193,7 @@ export default function InvoiceDetailPage() {
             <div className="flex w-[17%]">
               <div className="p-2 w-full flex items-center justify-between bg-gray-50 border-b-2 border-black px-2">
                 <span className="font-bold text-[10px]">NET TOTAL</span>
-                <span className="font-bold text-sm">
-                  {Number(invoice.totalAmount).toFixed(2)}
-                </span>
+                <span className="font-bold text-sm">{Number(invoice.totalAmount).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -222,7 +229,6 @@ export default function InvoiceDetailPage() {
               نوٹ: ایکسپائری کی اطلاع 4 ماہ قبل بل یا بل نمبر کیساتھ دیں
             </span>
           </div>
-
         </div>
       </div>
     </div>

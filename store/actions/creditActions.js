@@ -1,15 +1,39 @@
-import { updateCredit } from "../slices/creditSlice";
+import api from '@/lib/api';
+import {
+  setCreditsLoading,
+  setCredits,
+  setCreditsError,
+  updateCreditInList,
+} from '../slices/creditSlice';
 
-export const makePayment = (creditId, amount) => (dispatch, getState) => {
-  const credit = getState().credits.credits.find((c) => c.id === creditId);
-  if (credit) {
-    const updatedCredit = {
-      ...credit,
-      totalCredit: credit.totalCredit - amount,
-      lastPayment: amount,
-      lastPaymentDate: new Date().toISOString().split("T")[0],
-      status: credit.totalCredit - amount <= 0 ? "paid" : "pending",
-    };
-    dispatch(updateCredit(updatedCredit));
+export const fetchCredits = () => async (dispatch) => {
+  dispatch(setCreditsLoading());
+  try {
+    const { data } = await api.get('/credits');
+    dispatch(setCredits(data));
+  } catch (error) {
+    dispatch(setCreditsError(error.response?.data?.message || error.message));
+  }
+};
+
+export const fetchCreditById = async (id) => {
+  try {
+    const { data } = await api.get(`/credits/${id}`);
+    return data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};
+
+export const makePayment = (shopkeeperId, amount) => async (dispatch) => {
+  try {
+    const { data } = await api.post('/credits/payment', {
+      shopkeeperId,
+      amount: Number(amount),
+    });
+    dispatch(updateCreditInList(data));
+    return data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
   }
 };

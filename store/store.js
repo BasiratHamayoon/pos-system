@@ -10,6 +10,7 @@ import alertReducer from "./slices/alertSlice";
 import reportReducer from "./slices/reportSlice";
 import settingsReducer from "./slices/settingsSlice";
 import themeReducer from "./slices/themeSlice";
+import analyticsReducer from "./slices/analyticsSlice"; // <--- ADD THIS
 
 export const store = configureStore({
   reducer: {
@@ -24,5 +25,6 @@ export const store = configureStore({
     reports: reportReducer,
     settings: settingsReducer,
     theme: themeReducer,
+    analytics: analyticsReducer,
   },
 });

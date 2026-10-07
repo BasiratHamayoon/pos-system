@@ -1,43 +1,42 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { dummyReports } from "@/lib/dummyData";
 
 const initialState = {
-  reports: dummyReports,
-  selectedReport: null,
+  reports: [],
   isLoading: false,
   error: null,
-  filterType: "all",
-  currentPage: 1,
 };
 
 const reportSlice = createSlice({
   name: "reports",
   initialState,
   reducers: {
+    setReportsLoading(state) {
+      state.isLoading = true;
+      state.error = null;
+    },
     setReports(state, action) {
+      state.isLoading = false;
       state.reports = action.payload;
     },
-    addReport(state, action) {
+    setReportsError(state, action) {
+      state.isLoading = false;
+      state.error = action.payload;
+    },
+    addReportToList(state, action) {
       state.reports.unshift(action.payload);
     },
-    setSelectedReport(state, action) {
-      state.selectedReport = action.payload;
-    },
-    setReportFilterType(state, action) {
-      state.filterType = action.payload;
-      state.currentPage = 1;
-    },
-    setReportCurrentPage(state, action) {
-      state.currentPage = action.payload;
+    removeReportFromList(state, action) {
+      state.reports = state.reports.filter((r) => r._id !== action.payload);
     },
   },
 });
 
 export const {
+  setReportsLoading,
   setReports,
-  addReport,
-  setSelectedReport,
-  setReportFilterType,
-  setReportCurrentPage,
+  setReportsError,
+  addReportToList,
+  removeReportFromList,
 } = reportSlice.actions;
+
 export default reportSlice.reducer;

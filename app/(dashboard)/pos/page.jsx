@@ -13,6 +13,7 @@ import { createSale } from "@/store/actions/salesActions";
 import { fetchProducts } from "@/store/actions/productActions";
 import { fetchCategories } from "@/store/actions/categoryActions";
 import { fetchShopkeepers } from "@/store/actions/shopkeeperActions";
+import { fetchCredits } from "@/store/actions/creditActions";
 
 import POSHeader from "@/components/pos/POSHeader";
 import POSSearchBar from "@/components/pos/POSSearchBar";
@@ -69,7 +70,8 @@ export default function POSPage() {
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory =
-      selectedCategory === "all" || String(product.category) === String(selectedCategory);
+      selectedCategory === "all" ||
+      String(product.category) === String(selectedCategory);
     return matchesSearch && matchesCategory && product.stock > 0;
   });
 
@@ -106,9 +108,9 @@ export default function POSPage() {
     setIsCheckoutLoading(true);
     try {
       const salePayload = {
-        shopkeeperId: cartShopkeeper?._id || null,
+        shopkeeperId: cartShopkeeper?._id || cartShopkeeper?.id || null,
         items: cart.map((item) => ({
-          productId: item._id,
+          productId: item._id || item.id,
           name: item.name,
           qty: item.qty,
           price: item.price,
@@ -123,14 +125,16 @@ export default function POSPage() {
       };
 
       const sale = await dispatch(createSale(salePayload));
-      
+
       setLastInvoice(sale);
       setCartOpen(false);
       dispatch(clearCart());
       setDiscount(0);
-      
+
       dispatch(fetchProducts());
-      
+      dispatch(fetchShopkeepers());
+      dispatch(fetchCredits());
+
       setTimeout(() => setSuccessModalOpen(true), 300);
     } catch (err) {
       alert(err);
@@ -161,7 +165,7 @@ export default function POSPage() {
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">
       <POSHeader />
-      
+
       <POSSearchBar
         ref={searchRef}
         searchTerm={searchTerm}
