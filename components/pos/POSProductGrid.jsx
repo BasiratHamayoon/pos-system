@@ -2,6 +2,7 @@
 
 import { cn, formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Package, Plus, ShoppingCart, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -20,14 +21,9 @@ export default function POSProductGrid({ products, viewMode, cart, onAddToCart }
     );
   }
 
-  const formatUnit = (p) => {
-    if (!p.unit || p.unit === "pcs") return "pc";
-    return `${p.unitValue}${p.unit}`;
-  };
-
   if (viewMode === "list") {
     return (
-      <Card>
+      <Card className="mb-4">
         <CardContent className="p-0">
           <div className="divide-y">
             {products.map((product, index) => {
@@ -51,13 +47,16 @@ export default function POSProductGrid({ products, viewMode, cart, onAddToCart }
                     "flex h-10 w-10 items-center justify-center rounded-xl shrink-0",
                     isInCart ? "bg-primary/10 text-primary" : "bg-muted"
                   )}>
-                    <Package className="h-4 w-4" />
+                    <Package className="h-4.5 w-4.5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-xs font-semibold truncate">
-                        {product.name} <span className="text-muted-foreground font-normal">{formatUnit(product)}</span>
+                      <p className="text-sm font-bold truncate">
+                        {product.name}
                       </p>
+                      <Badge variant="outline" className="text-[9px] h-5 px-1.5 bg-background shadow-sm shrink-0">
+                        {product.variantLabel}
+                      </Badge>
                       {isInCart && (
                         <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0">
                           <ShoppingCart className="h-2.5 w-2.5" />
@@ -66,8 +65,12 @@ export default function POSProductGrid({ products, viewMode, cart, onAddToCart }
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      {product.brand && <span className="text-[10px] text-muted-foreground">{product.brand}</span>}
-                      <span className="text-[10px] text-muted-foreground">• Stock: {product.stock}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {product.categoryName} {product.brandName && `• ${product.brandName}`}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        • Stock: {product.stock}
+                      </span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -78,7 +81,7 @@ export default function POSProductGrid({ products, viewMode, cart, onAddToCart }
                     disabled={isMaxed}
                     className={cn(
                       "h-8 w-8 flex items-center justify-center rounded-lg transition-all shrink-0",
-                      isMaxed ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90"
+                      isMaxed ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90 opacity-0 group-hover:opacity-100"
                     )}
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -93,7 +96,7 @@ export default function POSProductGrid({ products, viewMode, cart, onAddToCart }
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 pb-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 pb-4">
       {products.map((product, index) => {
         const cartItem = cart.find((c) => c._id === product._id);
         const isInCart = !!cartItem;
@@ -131,18 +134,26 @@ export default function POSProductGrid({ products, viewMode, cart, onAddToCart }
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold truncate">{product.name}</p>
-                  {product.brand && <p className="text-[10px] text-muted-foreground truncate">{product.brand}</p>}
-                  <p className="text-[9px] text-primary font-semibold mt-0.5">{formatUnit(product)}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 rounded font-bold shadow-sm">
+                      {product.variantLabel}
+                    </Badge>
+                    {product.brandName && (
+                      <span className="text-[9px] text-muted-foreground truncate font-medium">
+                        {product.brandName}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                  <p className="text-sm font-bold">{formatCurrency(product.price)}</p>
+                  <p className="text-sm font-black text-primary">{formatCurrency(product.price)}</p>
                   <div className="flex items-center gap-1">
                     {product.stock <= 5 ? (
                       <AlertTriangle className="h-3 w-3 text-amber-500" />
                     ) : (
                       <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                     )}
-                    <span className="text-[10px] text-muted-foreground font-medium">{product.stock}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold">{product.stock}</span>
                   </div>
                 </div>
               </CardContent>

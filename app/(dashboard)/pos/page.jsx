@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   addToCart,
@@ -35,6 +35,7 @@ export default function POSPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
+  
   const [cartOpen, setCartOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -44,11 +45,22 @@ export default function POSPage() {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const searchRef = useRef(null);
 
+  // Initialize data and load viewMode from localStorage
   useEffect(() => {
     dispatch(fetchProducts());
     dispatch(fetchCategories());
     dispatch(fetchShopkeepers());
+
+    const savedViewMode = localStorage.getItem("posViewMode");
+    if (savedViewMode) {
+      setViewMode(savedViewMode);
+    }
   }, [dispatch]);
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem("posViewMode", mode);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -65,35 +77,63 @@ export default function POSPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cartOpen]);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      selectedCategory === "all" ||
-      String(product.category) === String(selectedCategory);
-    return matchesSearch && matchesCategory && product.stock > 0;
-  });
+  // Flatten Products and Variants for the POS Screen
+  const posItems = useMemo(() => {
+    const items = [];
+    products.forEach((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.brandName?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === "all" ||
+        String(product.category) === String(selectedCategory);
+
+      if (matchesSearch && matchesCategory) {
+        product.variants?.forEach((variant) => {
+          if (variant.stock > 0) {
+            items.push({
+              _id: `${product._id}_${variant._id}`,
+              productId: product._id,
+              variantId: variant._id,
+              name: product.name,
+              variantLabel: variant.label,
+              brandName: product.brandName,
+              categoryName: product.categoryName,
+              price: variant.price,
+              costPrice: variant.costPrice,
+              stock: variant.stock,
+              unitValue: variant.unitValue,
+              unit: variant.unit,
+              status: variant.status,
+            });
+          }
+        });
+      }
+    });
+    return items;
+  }, [products, searchTerm, selectedCategory]);
 
   const cartSubtotal = cart.reduce((sum, item) => sum + item.total, 0);
   const discountAmount = (cartSubtotal * discount) / 100;
   const cartTotal = cartSubtotal - discountAmount;
   const cartItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
-  const handleAddToCart = (product) => {
-    const existing = cart.find((item) => item._id === product._id);
-    if (existing && existing.qty >= product.stock) return;
-    dispatch(addToCart(product));
+  const handleAddToCart = (item) => {
+    const existing = cart.find((c) => c._id === item._id);
+    if (existing && existing.qty >= item.stock) return;
+    dispatch(addToCart(item));
     setCartOpen(true);
   };
 
   const handleUpdateQty = (id, qty) => {
-    const product = products.find((p) => p._id === id);
+    const itemInCart = cart.find((p) => p._id === id);
     if (qty <= 0) {
       dispatch(removeFromCart(id));
       return;
     }
-    if (product && qty > product.stock) return;
+    // We already have the max stock available saved inside the cart item from posItems
+    if (itemInCart && qty > itemInCart.stock) return;
     dispatch(updateCartQty({ id, qty }));
   };
 
@@ -110,7 +150,8 @@ export default function POSPage() {
       const salePayload = {
         shopkeeperId: cartShopkeeper?._id || cartShopkeeper?.id || null,
         items: cart.map((item) => ({
-          productId: item._id || item.id,
+          productId: item.productId, // Send real product ID
+          variantLabel: item.variantLabel, // Send variant label
           name: item.name,
           qty: item.qty,
           price: item.price,
@@ -174,12 +215,12 @@ export default function POSPage() {
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
         viewMode={viewMode}
-        setViewMode={setViewMode}
+        setViewMode={handleViewModeChange}
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl pb-24 pr-1">
         <POSProductGrid
-          products={filteredProducts}
+          products={posItems}
           viewMode={viewMode}
           cart={cart}
           onAddToCart={handleAddToCart}

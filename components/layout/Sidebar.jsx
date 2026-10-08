@@ -22,7 +22,7 @@ import {
   BarChart3,
   TrendingUp,
   Settings,
-  Store,
+  Store, 
   ChevronDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,6 +40,7 @@ const navItems = [
     items: [
       { title: "Products", href: "/products", icon: Package },
       { title: "Categories", href: "/categories", icon: Tags },
+      { title: "Brands", href: "/brands", icon: Store }, 
     ],
   },
   {

@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
 import productReducer from "./slices/productSlice";
 import categoryReducer from "./slices/categorySlice";
+import brandReducer from "./slices/brandSlice";
 import salesReducer from "./slices/salesSlice";
 import shopkeeperReducer from "./slices/shopkeeperSlice";
 import creditReducer from "./slices/creditSlice";
@@ -10,13 +11,14 @@ import alertReducer from "./slices/alertSlice";
 import reportReducer from "./slices/reportSlice";
 import settingsReducer from "./slices/settingsSlice";
 import themeReducer from "./slices/themeSlice";
-import analyticsReducer from "./slices/analyticsSlice"; // <--- ADD THIS
+import analyticsReducer from "./slices/analyticsSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     products: productReducer,
     categories: categoryReducer,
+    brands: brandReducer,
     sales: salesReducer,
     shopkeepers: shopkeeperReducer,
     credits: creditReducer,
