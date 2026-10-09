@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Save, Package, AlertCircle, Plus, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -58,7 +57,6 @@ export default function AddProductPage() {
     setIsLoading(true);
     setError("");
 
-    // Validation
     if (!formData.name || !formData.categoryId) {
       setError("Name and Category are required");
       setIsLoading(false);
@@ -66,8 +64,8 @@ export default function AddProductPage() {
     }
     
     for (let v of variants) {
-      if (!v.label || !v.price || !v.costPrice || !v.stock) {
-        setError("All variant fields (Label, Price, Cost, Stock) are required");
+      if (!v.label || !v.price || !v.costPrice || !v.stock || !v.minStock) {
+        setError("All variant fields including Min Alert are required");
         setIsLoading(false);
         return;
       }
@@ -106,7 +104,7 @@ export default function AddProductPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-10">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.push("/products")}>
@@ -164,7 +162,7 @@ export default function AddProductPage() {
             <CardContent className="p-6 sm:p-8 space-y-6">
               <div className="flex items-center justify-between pb-4 border-b">
                 <div>
-                  <h3 className="font-bold">Product Variants (Sizes / Pricing)</h3>
+                  <h3 className="font-bold">Product Variants (Sizes & Pricing)</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Add different sizes like Rs 30 Pack, Rs 50 Pack, 1.5 Liter, etc.</p>
                 </div>
                 <Button type="button" onClick={handleAddVariant} variant="outline" className="gap-2 h-9 rounded-lg text-xs font-bold">
@@ -177,12 +175,12 @@ export default function AddProductPage() {
                   {variants.map((variant, index) => (
                     <motion.div key={index} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="p-4 rounded-xl border-2 bg-muted/10 relative">
                       {variants.length > 1 && (
-                        <button type="button" onClick={() => handleRemoveVariant(index)} className="absolute -top-3 -right-3 h-7 w-7 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition-transform">
+                        <button type="button" onClick={() => handleRemoveVariant(index)} className="absolute -top-3 -right-3 h-7 w-7 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition-transform z-10">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                       
-                      <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-8 gap-4">
                         <div className="space-y-1.5 md:col-span-2">
                           <Label className="text-[10px] font-bold text-muted-foreground">Variant Name / Label *</Label>
                           <Input required value={variant.label} onChange={(e) => updateVariant(index, 'label', e.target.value)} className="h-9 text-xs bg-background" placeholder="e.g. Rs 50 Pack" />
@@ -206,8 +204,12 @@ export default function AddProductPage() {
                           <Input required type="number" step="0.01" min="0" value={variant.costPrice} onChange={(e) => updateVariant(index, 'costPrice', e.target.value)} className="h-9 text-xs bg-background" placeholder="0.00" />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Stock *</Label>
+                          <Label className="text-[10px] font-bold text-muted-foreground">Initial Stock *</Label>
                           <Input required type="number" min="0" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} className="h-9 text-xs bg-background" placeholder="0" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-bold text-muted-foreground">Min Alert *</Label>
+                          <Input required type="number" min="0" value={variant.minStock} onChange={(e) => updateVariant(index, 'minStock', e.target.value)} className="h-9 text-xs bg-background" placeholder="10" />
                         </div>
                       </div>
                     </motion.div>

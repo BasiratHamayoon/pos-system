@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchProfitLoss } from "@/store/actions/analyticsActions";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -49,14 +49,24 @@ export default function ProfitLossPage() {
     totalNetProfit = 0,
     monthlyData = [],
     categoryProfitData = [],
-  } = data;
+  } = data || {};
 
   const overallMargin = totalRevenue > 0 ? ((totalNetProfit / totalRevenue) * 100).toFixed(1) : 0;
 
+  const chartData = useMemo(() => {
+    if (!monthlyData || monthlyData.length === 0) return [];
+    if (monthlyData.length >= 2) return monthlyData;
+    return [
+      { month: "Previous", year: "", revenue: 0, cost: 0, profit: 0, expenses: 0, netProfit: 0 },
+      ...monthlyData
+    ];
+  }, [monthlyData]);
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      if (label === "Previous") return null;
       return (
-        <div className="bg-popover border rounded-xl shadow-xl p-3 min-w-[160px]">
+        <div className="bg-popover border rounded-xl shadow-xl p-3 min-w-[160px] z-50 relative">
           <p className="text-xs font-bold mb-2 pb-2 border-b">{label}</p>
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center justify-between gap-4 text-xs mb-1 last:mb-0">
@@ -194,10 +204,10 @@ export default function ProfitLossPage() {
                 </CardHeader>
                 <CardContent className="p-5 flex-1 min-h-[320px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="oklch(0.58 0.17 185)" stopOpacity={0.3} />
+                          <stop offset="5%" stopColor="oklch(0.58 0.17 185)" stopOpacity={0.4} />
                           <stop offset="95%" stopColor="oklch(0.58 0.17 185)" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
@@ -222,6 +232,7 @@ export default function ProfitLossPage() {
                         stroke="oklch(0.58 0.17 185)" 
                         strokeWidth={3}
                         fill="url(#colorRev)" 
+                        activeDot={{ r: 6, strokeWidth: 0 }}
                       />
                       <Area 
                         type="monotone" 
@@ -230,6 +241,7 @@ export default function ProfitLossPage() {
                         stroke="oklch(0.65 0.17 155)" 
                         strokeWidth={3}
                         fill="url(#colorNet)" 
+                        activeDot={{ r: 6, strokeWidth: 0 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>

@@ -14,3 +14,12 @@ export const fetchProfitLoss = () => async (dispatch) => {
     dispatch(setAnalyticsError(error.response?.data?.message || error.message));
   }
 };
+
+export const fetchPurchaseAnalytics = async () => {
+  try {
+    const { data } = await api.get('/analytics/purchase');
+    return data;
+  } catch (error) {
+    throw error.response?.data?.message || error.message;
+  }
+};

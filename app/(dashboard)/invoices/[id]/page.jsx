@@ -1,18 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
 import { fetchInvoiceById } from "@/store/actions/invoiceActions";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { user } = useSelector((state) => state.auth);
 
   const [invoice, setInvoice] = useState(null);
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -59,7 +56,7 @@ export default function InvoiceDetailPage() {
   const formattedTime = `${dateObj.getHours().toString().padStart(2, "0")}:${dateObj.getMinutes().toString().padStart(2, "0")}:${dateObj.getSeconds().toString().padStart(2, "0")}`;
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0 print:block print:h-auto print:bg-white">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 mb-4 print:hidden">
         <div className="flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => router.push("/invoices")}>
@@ -70,165 +67,159 @@ export default function InvoiceDetailPage() {
             <p className="text-xs text-muted-foreground mt-0.5">View and print invoice details</p>
           </div>
         </div>
-        <Button onClick={() => window.print()} className="gap-2 h-10 px-6 rounded-xl shadow-lg shadow-primary/20 font-bold">
+        <Button onClick={() => window.print()} className="gap-2 h-10 px-6 rounded-xl shadow-md shadow-primary/20 font-bold">
           <Printer className="h-4 w-4" /> Print Invoice
         </Button>
       </motion.div>
 
-      <div className="flex-1 overflow-y-auto sidebar-scroll pb-10 flex justify-center print:p-0 print:overflow-visible print:block">
-        <div
-          className="bg-white w-full max-w-[850px] shadow-sm rounded-xl text-black flex flex-col p-6 sm:p-10 border print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:p-0"
-          style={{ fontFamily: '"Courier New", Courier, monospace', fontSize: "12px" }}
+      <div className="flex-1 overflow-y-auto sidebar-scroll pb-10 flex justify-center print:p-0 print:overflow-hidden print:block bg-transparent print:bg-white">
+        
+        {/* THE PRINTABLE CONTAINER - FIXED PAPER LAYOUT */}
+        <div 
+          className="printable-invoice-container bg-white w-full max-w-[740px] shadow-sm text-black flex flex-col p-4 border border-black/10 print:border-0" 
+          style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", lineHeight: "1.2" }}
         >
-          <div className="mb-6">
-            <h1 className="text-[18px] sm:text-[20px] font-bold tracking-tight mb-1">
-              {user?.storeName || user?.name || "StorePOS"}
-            </h1>
-            <p className="font-bold">{user?.storeAddress || ""}</p>
-            <p className="font-bold">PH- {user?.storePhone || ""}</p>
-          </div>
-
-          <div className="flex justify-center mb-4">
-            <div className="border-2 border-black px-6 py-1 font-bold tracking-[0.3em] text-base">INVOICE</div>
-          </div>
-
-          <div className="flex justify-end text-[11px] sm:text-[12px] mb-2 font-bold">
-            <span>Page. No : <span className="ml-8">1</span></span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-0 mb-4 w-full border-2 border-black rounded-sm">
-            <div className="w-full sm:w-[60%] border-b-2 sm:border-b-0 sm:border-r-2 border-black flex flex-col">
-              {[
-                { label: "INVOICE NO", value: invoice.invoiceNo },
-                { label: "PARTY CODE", value: invoice.shopkeeper ? String(invoice.shopkeeper).slice(-4) : "CASH" },
-                { label: "PARTY NAME", value: invoice.shopName || invoice.shopkeeperName },
-                { label: "ADDRESS", value: invoice.address || "Walk-in" },
-                { label: "CONTACT #", value: invoice.phone || "" },
-                { label: "CNIC #", value: "" },
-                { label: "NTN/STRN #", value: "", noBorder: true },
-              ].map((row, i) => (
-                <div key={i} className={cn("flex w-full px-2 py-1.5 text-[11px]", !row.noBorder && "border-b border-black")}>
-                  <div className="w-28 font-bold shrink-0">{row.label}</div>
-                  <div className="w-full truncate pl-2">{row.value}</div>
-                </div>
-              ))}
+          {/* Header Top Row */}
+          <div className="flex flex-row justify-between items-start mb-2 w-full">
+            <div className="w-[50%]">
+              <h1 className="text-[15px] font-bold tracking-tight mb-0.5 text-black">
+                Three Star Traders Charsadda
+              </h1>
+              <p className="font-bold text-black text-[10px]">Peshawar Road Serdaryab Stop</p>
+              <p className="font-bold text-black text-[10px]">PH- 0313-9296448, 0300-5003923</p>
             </div>
-
-            <div className="w-full sm:w-[40%] flex flex-col">
-              {[
-                { label: "DATE", value: formattedDate },
-                { label: "S/MAN.CODE", value: "1" },
-                { label: "NAME", value: "Admin" },
-                { label: "TIME", value: formattedTime, noBorder: true },
-              ].map((row, i) => (
-                <div key={i} className={cn("flex w-full px-2 py-1.5 text-[11px]", !row.noBorder && "border-b border-black")}>
-                  <div className="w-24 font-bold shrink-0">{row.label}</div>
-                  <div className="w-full truncate pl-2">{row.value}</div>
-                </div>
-              ))}
+            <div className="w-[20%] text-center pt-1">
+              <div className="border border-black px-3 py-0.5 font-bold tracking-[0.2em] text-[12px] text-black">
+                INVOICE
+              </div>
+            </div>
+            <div className="w-[30%] text-right text-[10px] font-bold text-black pt-4">
+              <span>Page. No : <span className="ml-4">1</span></span>
             </div>
           </div>
 
-          <table className="w-full border-collapse border-2 border-black text-center mb-2 text-[11px]">
+          {/* Top Info Box - STRICT FLEX-ROW (58% Left / 42% Right) */}
+          <div className="flex flex-row w-full border border-black rounded-sm mb-1.5 text-[9.5px]">
+            
+            {/* Left Customer Box */}
+            <div className="w-[58%] border-r border-black flex flex-col">
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-24 font-bold shrink-0 text-black">INVOICE NO</div>
+                <div className="w-full text-black font-semibold">{invoice.invoiceNo}</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-24 font-bold shrink-0 text-black">PARTY CODE</div>
+                <div className="w-full text-black">{invoice.shopkeeper ? String(invoice.shopkeeper).slice(-4) : "CASH"}</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-24 font-bold shrink-0 text-black">PARTY NAME</div>
+                <div className="w-full truncate text-black font-semibold">{invoice.shopName || invoice.shopkeeperName}</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-24 font-bold shrink-0 text-black">ADDRESS</div>
+                <div className="w-full truncate text-black">{invoice.address || "Nowshehra Road"}</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-24 font-bold shrink-0 text-black">CONTACT #</div>
+                <div className="w-full text-black">{invoice.phone || ""}</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-24 font-bold shrink-0 text-black">CNIC #</div>
+                <div className="w-full text-black"></div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px]">
+                <div className="w-24 font-bold shrink-0 text-black">NTN/STRN #</div>
+                <div className="w-full text-black"></div>
+              </div>
+            </div>
+
+            {/* Right Date & Time Box */}
+            <div className="w-[42%] flex flex-col">
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-20 font-bold shrink-0 text-black">DATE</div>
+                <div className="w-full text-black font-semibold">{formattedDate}</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-20 font-bold shrink-0 text-black">S/MAN.CODE</div>
+                <div className="w-full text-black">2</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px] border-b border-black">
+                <div className="w-20 font-bold shrink-0 text-black">NAME</div>
+                <div className="w-full truncate text-black font-semibold">Shahzeb</div>
+              </div>
+              <div className="flex flex-row w-full px-1.5 py-[2px]">
+                <div className="w-20 font-bold shrink-0 text-black">TIME</div>
+                <div className="w-full text-black">{formattedTime}</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Items Table */}
+          <table className="w-full border-collapse border border-black text-center mb-1 text-[9.5px]">
             <thead>
-              <tr className="border-b-2 border-black bg-white">
-                <th className="border-r border-black font-bold p-2 w-14">CODE</th>
-                <th className="border-r border-black font-bold p-2 text-left pl-2">PARTICULAR</th>
-                <th className="border-r border-black font-bold p-2 w-16">BATCH</th>
-                <th className="border-r border-black font-bold p-2 w-24">RATE</th>
-                <th className="border-r border-black font-bold p-2 w-14">QTY</th>
-                <th className="border-r border-black font-bold p-2 w-14">BONUS</th>
-                <th className="border-r border-black font-bold p-2 w-14">DISC</th>
-                <th className="border-r border-black font-bold p-2 w-24 leading-tight">Trade Offer</th>
-                <th className="font-bold p-2 w-28 text-right pr-3">NET TOTAL</th>
+              <tr className="border-b border-black bg-white">
+                <th className="border-r border-black font-bold p-1 w-10 text-black">CODE</th>
+                <th className="border-r border-black font-bold p-1 text-left pl-1.5 text-black">PARTICULAR</th>
+                <th className="border-r border-black font-bold p-1 w-12 text-black">BATCH</th>
+                <th className="border-r border-black font-bold p-1 w-14 text-black">RATE</th>
+                <th className="border-r border-black font-bold p-1 w-8 text-black">QTY</th>
+                <th className="border-r border-black font-bold p-1 w-8 text-black">BONUS</th>
+                <th className="border-r border-black font-bold p-1 w-8 text-black">DISC</th>
+                <th className="border-r border-black font-bold p-1 w-14 leading-tight text-black text-[7.5px]">Trade Offer</th>
+                <th className="font-bold p-1 w-16 text-right pr-1.5 text-black">NET TOTAL</th>
               </tr>
             </thead>
             <tbody>
-              {invoice.items && invoice.items.length > 0 ? invoice.items.map((item, idx) => (
-                <tr key={idx} className="border-b border-gray-300 last:border-b-0">
-                  <td className="border-r border-black p-2">{item.code || String(item.productId || "").slice(-3) || `31${idx}`}</td>
-                  <td className="border-r border-black p-2 text-left pl-2 font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[250px]">
-                    {item.name}
-                    {item.unit && item.unit !== 'pcs' && ` (${item.unitValue}${item.unit})`}
+              {invoice.items?.map((item, idx) => (
+                <tr key={idx} className="border-b border-black/20 last:border-b-0">
+                  <td className="border-r border-black p-0.5 text-black">{item.code || String(item.productId || "").slice(-3) || `31${idx}`}</td>
+                  <td className="border-r border-black p-0.5 text-left pl-1.5 font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] text-black">
+                    {item.name} {item.variantLabel || ""}
                   </td>
-                  <td className="border-r border-black p-2">***.***</td>
-                  <td className="border-r border-black p-2 text-right pr-2">{Number(item.price).toFixed(3)}</td>
-                  <td className="border-r border-black p-2 font-bold">{item.qty}</td>
-                  <td className="border-r border-black p-2"></td>
-                  <td className="border-r border-black p-2"></td>
-                  <td className="border-r border-black p-2"></td>
-                  <td className="p-2 text-right pr-3 font-bold">{(Number(item.qty) * Number(item.price)).toFixed(2)}</td>
+                  <td className="border-r border-black p-0.5 text-black">***.***</td>
+                  <td className="border-r border-black p-0.5 text-right pr-1 text-black">{Number(item.price).toFixed(3)}</td>
+                  <td className="border-r border-black p-0.5 font-bold text-black">{item.qty}</td>
+                  <td className="border-r border-black p-0.5 text-black"></td>
+                  <td className="border-r border-black p-0.5 text-black"></td>
+                  <td className="border-r border-black p-0.5 text-black"></td>
+                  <td className="p-0.5 text-right pr-1.5 font-bold text-black">{(Number(item.qty) * Number(item.price)).toFixed(2)}</td>
                 </tr>
-              )) : (
-                <tr>
-                  <td colSpan={9} className="p-8 font-bold">No itemized details available.</td>
-                </tr>
-              )}
+              ))}
             </tbody>
           </table>
 
-          <div className="flex border-2 border-black mb-4 divide-x-2 divide-black bg-white text-[11px]">
-            <div className="flex w-[22%]">
-              <div className="font-bold p-2 w-full flex items-center pl-2">GRAND TOTAL</div>
+          {/* Totals Summary Row */}
+          <div className="flex flex-row border border-black mb-1 divide-x divide-black bg-white text-[9.5px]">
+            <div className="flex w-[20%]"><div className="font-bold p-0.5 w-full flex items-center pl-1.5 text-black">GRAND TOTAL</div></div>
+            <div className="flex w-[15%]"><div className="p-0.5 w-full flex items-center justify-end font-bold pr-1 text-[10px] text-black">{Number(invoice.subtotal).toFixed(2)}</div></div>
+            <div className="flex w-[15%]"><div className="font-bold p-0.5 w-full flex items-center justify-center tracking-wider text-black">DISCOUNT</div></div>
+            <div className="flex w-[15%]"><div className="p-0.5 w-full flex items-center justify-end font-bold pr-1 text-black">{Number(invoice.discount || 0).toFixed(2)}</div></div>
+            <div className="flex w-[15%]"><div className="p-0.5 w-full flex items-center justify-between px-1 text-black"><span className="font-bold text-[8.5px]">SALE TAX</span><span className="font-bold">0.00</span></div></div>
+            <div className="flex w-[20%]"><div className="p-0.5 w-full flex items-center justify-between px-1 text-black"><span className="font-bold text-[8.5px]">NET TOTAL</span><span className="font-bold text-[10px]">{Number(invoice.totalAmount).toFixed(2)}</span></div></div>
+          </div>
+
+          {/* Net Amount & Total Items Row */}
+          <div className="flex flex-row justify-between items-start mt-0.5 text-[9.5px]">
+            <div className="border border-black rounded-full px-2.5 py-0.5 flex gap-6 items-center bg-white">
+              <span className="font-bold text-black">Total Item.</span>
+              <span className="font-bold text-black">{invoice.items?.length || 0}</span>
             </div>
-            <div className="flex w-[15%]">
-              <div className="p-2 w-full flex items-center justify-end font-bold pr-2 text-sm">
-                {Number(invoice.subtotal).toFixed(2)}
-              </div>
-            </div>
-            <div className="flex w-[18%]">
-              <div className="font-bold p-2 w-full flex items-center justify-center tracking-wider">DISCOUNT</div>
-            </div>
-            <div className="flex w-[12%]">
-              <div className="p-2 w-full flex items-center justify-end font-bold pr-2">
-                {Number(invoice.discount || 0).toFixed(2)}
-              </div>
-            </div>
-            <div className="flex w-[16%]">
-              <div className="p-2 w-full flex items-center justify-between px-2">
-                <span className="font-bold text-[10px]">SALE TAX</span>
-                <span className="font-bold">0.00</span>
-              </div>
-            </div>
-            <div className="flex w-[17%]">
-              <div className="p-2 w-full flex items-center justify-between bg-gray-50 border-b-2 border-black px-2">
-                <span className="font-bold text-[10px]">NET TOTAL</span>
-                <span className="font-bold text-sm">{Number(invoice.totalAmount).toFixed(2)}</span>
+            <div className="flex flex-col items-end border-b border-black pb-0.5 min-w-[160px]">
+              <div className="flex justify-between w-full font-bold px-1 text-black">
+                <span className="text-[10px]">Net Amount</span>
+                <span className="text-[10px]">{Number(invoice.totalAmount).toFixed(2)}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-start mt-2 text-[11px]">
-            <div className="border-2 border-black rounded-full px-6 py-1.5 flex gap-16 items-center bg-white">
-              <span className="font-bold">Total Item.</span>
-              <span className="font-bold">{invoice.items?.length || 0}</span>
-            </div>
-            <div className="flex flex-col items-end border-b-2 border-black pb-1.5 min-w-[250px]">
-              <div className="flex justify-between w-full font-bold px-3">
-                <span className="text-sm">Net Amount</span>
-                <span className="text-sm">{Number(invoice.totalAmount).toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-start mt-4">
-             <div className="border border-black p-2 min-w-[200px] text-[11px]">
-                <div className="flex justify-between font-bold mb-1">
-                  <span>Paid:</span>
-                  <span className="text-emerald-700">{Number(invoice.paidAmount).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Credit/Khata:</span>
-                  <span className="text-orange-700">{Number(invoice.creditAmount).toFixed(2)}</span>
-                </div>
-             </div>
-          </div>
-
-          <div className="mt-8 text-right pr-2">
-            <span className="font-bold text-sm" dir="rtl" style={{ fontFamily: "Arial, sans-serif" }}>
+          {/* Urdu Note */}
+          <div className="mt-2 text-right pr-1">
+            <span className="font-bold text-[10px] text-black" dir="rtl" style={{ fontFamily: "Arial, sans-serif" }}>
               نوٹ: ایکسپائری کی اطلاع 4 ماہ قبل بل یا بل نمبر کیساتھ دیں
             </span>
           </div>
+
         </div>
       </div>
     </div>

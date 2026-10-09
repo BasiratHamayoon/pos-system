@@ -12,6 +12,8 @@ import reportReducer from "./slices/reportSlice";
 import settingsReducer from "./slices/settingsSlice";
 import themeReducer from "./slices/themeSlice";
 import analyticsReducer from "./slices/analyticsSlice";
+import supplierReducer from "./slices/supplierSlice"; // NEW
+import purchaseReducer from "./slices/purchaseSlice"; // NEW
 
 export const store = configureStore({
   reducer: {
@@ -28,5 +30,7 @@ export const store = configureStore({
     settings: settingsReducer,
     theme: themeReducer,
     analytics: analyticsReducer,
+    suppliers: supplierReducer, 
+    purchases: purchaseReducer,
   },
 });

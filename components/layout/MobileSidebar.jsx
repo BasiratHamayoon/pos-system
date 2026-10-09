@@ -23,6 +23,8 @@ import {
   Settings,
   Store, 
   ChevronDown,
+  Truck, Factory, 
+  TrendingDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -58,6 +60,14 @@ const navItems = [
       { title: "Profit & Loss", href: "/profit-loss", icon: TrendingUp },
     ],
   },
+  {
+    group: "Purchases",
+    items: [
+      { title: "Purchase History", href: "/purchases", icon: FileText },
+      { title: "Suppliers", href: "/suppliers", icon: Factory },
+      { title: "Purchase Analytics", href: "/purchases/analytics", icon: TrendingDown },
+    ],
+  },  
   {
     group: "System",
     items: [{ title: "Settings", href: "/settings", icon: Settings }],
