@@ -7,6 +7,10 @@ import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
 
 export default function POSSuccessModal({ open, onOpenChange, invoice, onPrint, onView, onNewSale }) {
+  const paid = Number(invoice?.paidAmount || 0);
+  const credit = Number(invoice?.creditAmount || 0);
+  const total = Number(invoice?.totalAmount || 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px] rounded-2xl p-0 overflow-hidden text-center">
@@ -19,22 +23,35 @@ export default function POSSuccessModal({ open, onOpenChange, invoice, onPrint, 
           >
             <CheckCircle2 className="h-8 w-8 text-white" />
           </motion.div>
-          <DialogTitle className="text-xl font-bold text-white mb-1">Payment Successful!</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-white mb-1">Transaction Successful!</DialogTitle>
           <DialogDescription className="text-white/80 text-sm font-medium">
-            Transaction #{invoice?.invoiceNo} recorded securely.
+            Invoice #{invoice?.invoiceNo} recorded
           </DialogDescription>
         </div>
+
         <div className="p-6 bg-background space-y-4">
-          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 flex flex-col gap-1">
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-wider">Total Received</span>
-            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-500">
-              {formatCurrency(invoice?.totalAmount || 0)}
-            </span>
+          <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground font-semibold">Total Bill</span>
+              <span className="font-bold">{formatCurrency(total)}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-emerald-600 font-bold">Cash Received</span>
+              <span className="font-black text-emerald-600">{formatCurrency(paid)}</span>
+            </div>
+            {credit > 0 && (
+              <div className="flex justify-between items-center text-xs pt-1 border-t border-dashed">
+                <span className="text-orange-600 font-bold">Added to Khata / Udhaar</span>
+                <span className="font-black text-orange-600">{formatCurrency(credit)}</span>
+              </div>
+            )}
           </div>
+
           <div className="space-y-2 w-full pt-2">
             <Button onClick={onPrint} className="w-full h-12 rounded-xl font-bold gap-2 text-sm shadow-lg shadow-primary/20">
               <Printer className="h-4 w-4" /> Print Receipt
             </Button>
+            
             <div className="flex gap-2">
               <Button variant="outline" onClick={onView} className="flex-1 h-11 rounded-xl font-semibold gap-2">
                 <Eye className="h-4 w-4" /> View

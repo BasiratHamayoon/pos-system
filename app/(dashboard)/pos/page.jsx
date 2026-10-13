@@ -35,7 +35,7 @@ export default function POSPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState("grid");
-  
+
   const [cartOpen, setCartOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -43,9 +43,10 @@ export default function POSPage() {
   const [lastInvoice, setLastInvoice] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [checkoutErrorMessage, setCheckoutErrorMessage] = useState("");
+
   const searchRef = useRef(null);
 
-  // Initialize data and load viewMode from localStorage
   useEffect(() => {
     dispatch(fetchProducts());
     dispatch(fetchCategories());
@@ -77,7 +78,6 @@ export default function POSPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cartOpen]);
 
-  // Flatten Products and Variants for the POS Screen
   const posItems = useMemo(() => {
     const items = [];
     products.forEach((product) => {
@@ -123,6 +123,7 @@ export default function POSPage() {
     const existing = cart.find((c) => c._id === item._id);
     if (existing && existing.qty >= item.stock) return;
     dispatch(addToCart(item));
+    setCheckoutErrorMessage("");
     setCartOpen(true);
   };
 
@@ -132,7 +133,6 @@ export default function POSPage() {
       dispatch(removeFromCart(id));
       return;
     }
-    // We already have the max stock available saved inside the cart item from posItems
     if (itemInCart && qty > itemInCart.stock) return;
     dispatch(updateCartQty({ id, qty }));
   };
@@ -142,26 +142,30 @@ export default function POSPage() {
     setDiscount(0);
     setClearConfirmOpen(false);
     setCartOpen(false);
+    setCheckoutErrorMessage("");
   };
 
   const handleCheckout = async (paymentData) => {
     setIsCheckoutLoading(true);
+    setCheckoutErrorMessage("");
+
     try {
       const salePayload = {
         shopkeeperId: cartShopkeeper?._id || cartShopkeeper?.id || null,
         items: cart.map((item) => ({
-          productId: item.productId, // Send real product ID
-          variantLabel: item.variantLabel, // Send variant label
+          productId: item.productId,
+          variantId: item.variantId,
+          variantLabel: item.variantLabel,
           name: item.name,
           qty: item.qty,
           price: item.price,
+          costPrice: item.costPrice,
         })),
         subtotal: cartSubtotal,
         discount: discountAmount,
         discountPercent: discount,
         totalAmount: cartTotal,
         paidAmount: paymentData.paidAmount,
-        creditAmount: paymentData.creditAmount,
         paymentMethod: paymentData.paymentMethod,
       };
 
@@ -178,8 +182,8 @@ export default function POSPage() {
 
       setTimeout(() => setSuccessModalOpen(true), 300);
     } catch (err) {
-      alert(err);
-    } finally {
+      setCheckoutErrorMessage(typeof err === "string" ? err : err.message || "Failed to process sale");
+    } font: {
       setIsCheckoutLoading(false);
     }
   };
@@ -252,6 +256,7 @@ export default function POSPage() {
         onClear={() => setClearConfirmOpen(true)}
         onCheckout={handleCheckout}
         isCheckoutLoading={isCheckoutLoading}
+        externalError={checkoutErrorMessage}
       />
 
       <POSSuccessModal

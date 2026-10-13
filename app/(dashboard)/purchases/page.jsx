@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Package, Banknote, CreditCard, ArrowRightLeft, Eye } from "lucide-react";
+import { Search, Plus, Package, Banknote, CreditCard, ArrowRightLeft, Eye, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function PurchasesPage() {
@@ -34,9 +34,14 @@ export default function PurchasesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Purchase Orders</h1>
           <p className="text-xs text-muted-foreground mt-0.5">History of incoming stock</p>
         </div>
-        <Button onClick={() => router.push("/purchases/add")} className="gap-2 h-10 px-4 rounded-xl shadow-md shadow-primary/20">
-          <Plus className="h-4 w-4" /> New Purchase (Stock In)
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" onClick={() => router.push("/purchases/analytics")} className="gap-2 h-10 px-4 rounded-xl font-bold">
+            <TrendingUp className="h-4 w-4" /> Analytics
+          </Button>
+          <Button onClick={() => router.push("/purchases/add")} className="gap-2 h-10 px-4 rounded-xl shadow-md shadow-primary/20 font-bold">
+            <Plus className="h-4 w-4" /> New Purchase
+          </Button>
+        </div>
       </motion.div>
 
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border-2 shadow-sm">
@@ -94,7 +99,12 @@ export default function PurchasesPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-primary hover:bg-primary/10"
+                        onClick={() => router.push(`/purchases/${po._id}`)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
                     </td>

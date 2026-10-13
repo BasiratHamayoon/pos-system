@@ -19,13 +19,19 @@ const paymentMethods = [
 
 export default function POSCartDrawer({
   open, onOpenChange, cart, discount, subtotal, discountAmount, total, itemCount,
-  shopkeepers, selectedShopkeeper, onSelectShopkeeper, onUpdateQty, onRemove, onDiscountChange, onClear, onCheckout, isCheckoutLoading
+  shopkeepers, selectedShopkeeper, onSelectShopkeeper, onUpdateQty, onRemove, onDiscountChange, onClear, onCheckout, isCheckoutLoading, externalError
 }) {
   const [view, setView] = useState("cart");
   const [searchCustomer, setSearchCustomer] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paidAmount, setPaidAmount] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
+
+  useEffect(() => {
+    if (externalError) {
+      setCheckoutError(externalError);
+    }
+  }, [externalError]);
 
   useEffect(() => {
     if (open) {
@@ -69,7 +75,7 @@ export default function POSCartDrawer({
 
     onCheckout({
       paymentMethod,
-      paidAmount: paymentMethod === "credit" ? 0 : Math.min(paid, total),
+      paidAmount: paymentMethod === "cash" ? total : paymentMethod === "credit" ? 0 : paid,
       creditAmount: paymentMethod === "cash" ? 0 : paymentMethod === "credit" ? total : creditAmount,
     });
   };
@@ -341,7 +347,7 @@ export default function POSCartDrawer({
                     <div className="space-y-2 p-3 rounded-xl bg-muted/30 border border-dashed border-muted-foreground/30">
                       <div className="flex justify-between text-xs"><span className="text-muted-foreground font-medium">Total Bill</span><span className="font-bold">{formatCurrency(total)}</span></div>
                       {paymentMethod !== "credit" && (
-                        <div className="flex justify-between text-xs"><span className="text-muted-foreground font-medium">Paid</span><span className="font-bold text-emerald-600">{formatCurrency(paid)}</span></div>
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground font-medium font-bold text-emerald-600">Paid</span><span className="font-bold text-emerald-600">{formatCurrency(paid)}</span></div>
                       )}
                       {paymentMethod === "cash" && paid > total && (
                         <div className="flex justify-between text-xs pt-1 mt-1 border-t border-dashed">
