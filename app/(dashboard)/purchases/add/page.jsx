@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Search, CheckCircle2, AlertCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Plus, Trash2, Search, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function AddPurchasePage() {
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function AddPurchasePage() {
 
   const [supplierId, setSupplierId] = useState("");
   const [items, setItems] = useState([]);
-  
+
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState("");
@@ -42,9 +42,9 @@ export default function AddPurchasePage() {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  const searchResults = search.length > 1 
-    ? products.filter(p => 
-        p.name.toLowerCase().includes(search.toLowerCase()) || 
+  const searchResults = search.length > 1
+    ? products.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.barcode?.includes(search)
       )
     : [];
@@ -69,7 +69,7 @@ export default function AddPurchasePage() {
   const handleAddItem = () => {
     if (!selectedProduct || !selectedVariant || !addQty || !addCost) return;
     const variant = selectedProduct.variants.find(v => v._id === selectedVariant);
-    
+
     setItems([...items, {
       id: Math.random().toString(),
       productId: selectedProduct._id,
@@ -90,22 +90,22 @@ export default function AddPurchasePage() {
   const subtotal = items.reduce((sum, i) => sum + i.total, 0);
   const discountVal = parseFloat(discount) || 0;
   const totalAmount = subtotal - discountVal;
-  const paidVal = parseFloat(paidAmount) || 0;
-  let dueAmount = 0;
 
-  if (paymentMethod === 'credit') dueAmount = totalAmount;
-  else if (paymentMethod === 'partial') dueAmount = Math.max(0, totalAmount - paidVal);
+  const inputPaid = parseFloat(paidAmount);
+  const actualPaid = isNaN(inputPaid) ? (paymentMethod === "cash" ? totalAmount : 0) : inputPaid;
+  const dueAmount = paymentMethod === "credit" ? totalAmount : Math.max(0, totalAmount - actualPaid);
 
   useEffect(() => {
     if (paymentMethod === 'cash') setPaidAmount(totalAmount.toString());
     else if (paymentMethod === 'credit') setPaidAmount("0");
-  }, [paymentMethod, totalAmount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentMethod]);
 
   const handleSubmit = async () => {
     setError("");
     if (!supplierId) { setError("Please select a supplier"); return; }
     if (items.length === 0) { setError("Purchase list is empty"); return; }
-    
+
     setIsLoading(true);
     try {
       await dispatch(createPurchase({
@@ -114,7 +114,7 @@ export default function AddPurchasePage() {
         subtotal,
         discount: discountVal,
         totalAmount,
-        paidAmount: paymentMethod === 'credit' ? 0 : paidVal,
+        paidAmount: paymentMethod === "credit" ? 0 : actualPaid,
         dueAmount,
         paymentMethod
       }));
@@ -234,34 +234,30 @@ export default function AddPurchasePage() {
 
               <div className="space-y-3">
                 <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Payment Method</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['cash', 'credit', 'partial'].map(m => (
-                    <button key={m} onClick={() => setPaymentMethod(m)} className={cn("px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all border-2", paymentMethod === m ? "border-primary bg-primary/10 text-primary" : "border-transparent bg-muted text-muted-foreground hover:bg-accent")}>
-                      {m}
+                <div className="grid grid-cols-2 gap-2">
+                  {['cash', 'credit'].map(m => (
+                    <button key={m} onClick={() => setPaymentMethod(m)} className={cn("px-2 py-2 rounded-lg text-xs font-bold uppercase transition-all border-2", paymentMethod === m ? "border-primary bg-primary/10 text-primary" : "border-transparent bg-muted text-muted-foreground hover:bg-accent")}>
+                      {m === 'credit' ? 'Credit (Udhaar)' : 'Cash'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {paymentMethod !== 'credit' && (
+              {paymentMethod === 'cash' && (
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Paid Amount</Label>
+                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount Paid (Rs)</Label>
                   <Input type="number" min="0" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="h-10 font-bold" />
                 </div>
               )}
 
-              {(paymentMethod === 'credit' || paymentMethod === 'partial') && (
+              {dueAmount > 0 && (
                 <div className="flex justify-between text-xs p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50">
                   <span className="font-bold text-red-700 dark:text-red-400">Total Payable (Udhaar)</span>
                   <span className="font-black text-red-600 dark:text-red-500">{formatCurrency(dueAmount)}</span>
                 </div>
               )}
 
-              {error && (
-                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-xs border border-destructive/20">
-                  <AlertCircle className="h-4 w-4 shrink-0" /><span>{error}</span>
-                </div>
-              )}
+              {error && <div className="text-xs text-destructive bg-destructive/10 p-2 rounded-lg font-bold">{error}</div>}
 
               <Button onClick={handleSubmit} disabled={isLoading || items.length === 0 || !supplierId} className="w-full h-12 font-bold text-sm shadow-lg shadow-primary/20 rounded-xl gap-2">
                 {isLoading ? "Saving..." : <><CheckCircle2 className="h-4 w-4" /> Finalize Purchase</>}

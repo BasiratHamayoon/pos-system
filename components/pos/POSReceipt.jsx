@@ -17,6 +17,18 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
 
   const paidVal = Number(invoice.paidAmount || 0);
   const creditVal = Number(invoice.creditAmount || 0);
+  const totalVal = Number(invoice.totalAmount || 0);
+
+  // Determine payment status label
+  let paymentStatusLabel = "FULLY PAID (CASH)";
+  let paymentStatusClass = "bg-green-100";
+  if (creditVal > 0 && paidVal === 0) {
+    paymentStatusLabel = "FULL KHATA (CREDIT)";
+    paymentStatusClass = "bg-orange-100";
+  } else if (creditVal > 0 && paidVal > 0) {
+    paymentStatusLabel = "PARTIAL (CASH + KHATA)";
+    paymentStatusClass = "bg-yellow-100";
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -30,8 +42,12 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
 
         <div className="flex-1 overflow-y-auto p-3 flex justify-center bg-muted/30 print:p-0 print:bg-white print:overflow-visible print:block">
           
-          <div className="printable-invoice-container bg-white w-full max-w-[740px] shadow-sm text-black flex flex-col p-4 border border-black/10 print:border-0" style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", lineHeight: "1.15" }}>
+          <div 
+            className="printable-invoice-container bg-white w-full max-w-[740px] shadow-sm text-black flex flex-col p-4 border border-black/10 print:border-0" 
+            style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", lineHeight: "1.15" }}
+          >
             
+            {/* Header Top Row */}
             <div className="flex flex-row justify-between items-start mb-2 w-full">
               <div className="w-[50%]">
                 <h1 className="text-[15px] font-bold tracking-tight mb-0.5 text-black">
@@ -50,7 +66,10 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
               </div>
             </div>
 
+            {/* Top Info Box */}
             <div className="flex flex-row w-full border border-black rounded-sm mb-1.5 text-[9.5px]">
+              
+              {/* Left Customer Box */}
               <div className="w-[58%] border-r border-black flex flex-col">
                 {[
                   { label: "INVOICE NO", value: invoice.invoiceNo },
@@ -68,6 +87,7 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
                 ))}
               </div>
 
+              {/* Right Date & Time Box */}
               <div className="w-[42%] flex flex-col">
                 {[
                   { label: "DATE", value: formattedDate },
@@ -83,6 +103,7 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
               </div>
             </div>
 
+            {/* Items Table */}
             <table className="w-full border-collapse border border-black text-center mb-1 text-[9.5px]">
               <thead>
                 <tr className="border-b border-black bg-white">
@@ -116,15 +137,17 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
               </tbody>
             </table>
 
+            {/* Totals Summary Row */}
             <div className="flex flex-row border border-black mb-1 divide-x divide-black bg-white text-[9.5px]">
               <div className="flex w-[20%]"><div className="font-bold p-0.5 w-full flex items-center pl-1.5 text-black">GRAND TOTAL</div></div>
               <div className="flex w-[15%]"><div className="p-0.5 w-full flex items-center justify-end font-bold pr-1 text-[10px] text-black">{Number(invoice.subtotal).toFixed(2)}</div></div>
               <div className="flex w-[15%]"><div className="font-bold p-0.5 w-full flex items-center justify-center tracking-wider text-black">DISCOUNT</div></div>
               <div className="flex w-[15%]"><div className="p-0.5 w-full flex items-center justify-end font-bold pr-1 text-black">{Number(invoice.discount || 0).toFixed(2)}</div></div>
               <div className="flex w-[15%]"><div className="p-0.5 w-full flex items-center justify-between px-1 text-black"><span className="font-bold text-[8.5px]">SALE TAX</span><span className="font-bold">0.00</span></div></div>
-              <div className="flex w-[20%]"><div className="p-0.5 w-full flex items-center justify-between px-1 text-black"><span className="font-bold text-[8.5px]">NET TOTAL</span><span className="font-bold text-[10px]">{Number(invoice.totalAmount).toFixed(2)}</span></div></div>
+              <div className="flex w-[20%]"><div className="p-0.5 w-full flex items-center justify-between px-1 text-black"><span className="font-bold text-[8.5px]">NET TOTAL</span><span className="font-bold text-[10px]">{totalVal.toFixed(2)}</span></div></div>
             </div>
 
+            {/* Net Amount & Total Items Row */}
             <div className="flex flex-row justify-between items-start mt-0.5 text-[9.5px]">
               <div className="border border-black rounded-full px-2.5 py-0.5 flex gap-6 items-center bg-white">
                 <span className="font-bold text-black">Total Item.</span>
@@ -133,33 +156,38 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
               <div className="flex flex-col items-end border-b border-black pb-0.5 min-w-[160px]">
                 <div className="flex justify-between w-full font-bold px-1 text-black">
                   <span className="text-[10px]">Net Amount</span>
-                  <span className="text-[10px]">{Number(invoice.totalAmount).toFixed(2)}</span>
+                  <span className="text-[10px]">{totalVal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* PAYMENT BREAKDOWN ROW (Paid vs Khata) */}
-            <div className="flex flex-row justify-between items-center mt-1 border-t border-b border-black py-0.5 text-[9.5px] font-bold text-black">
-              <div>
-                <span>PAYMENT TYPE: </span>
-                <span className="uppercase font-black">{invoice.paymentMethod || "CASH"}</span>
+            <div className="flex flex-row justify-between items-center mt-1 border-t border-b border-black py-1 text-[9.5px] font-bold text-black">
+              <div className="flex items-center gap-2">
+                <span>PAYMENT:</span>
+                <span className={cn("uppercase font-black px-1.5 py-[1px] border border-black text-[9px]", paymentStatusClass)}>
+                  {paymentStatusLabel}
+                </span>
               </div>
               <div className="flex gap-4">
-                <span>PAID: <span className="font-black">{paidVal.toFixed(2)}</span></span>
+                <span>PAID: <span className="font-black">Rs. {paidVal.toFixed(2)}</span></span>
                 {creditVal > 0 && (
-                  <span>KHATA / UDHAAR: <span className="font-black">{creditVal.toFixed(2)}</span></span>
+                  <span className="text-red-700">KHATA DUE: <span className="font-black">Rs. {creditVal.toFixed(2)}</span></span>
                 )}
               </div>
             </div>
 
+            {/* Urdu Note */}
             <div className="mt-2 text-right pr-1">
               <span className="font-bold text-[10px] text-black" dir="rtl" style={{ fontFamily: "Arial, sans-serif" }}>
                 نوٹ: ایکسپائری کی اطلاع 4 ماہ قبل بل یا بل نمبر کیساتھ دیں
               </span>
             </div>
+
           </div>
         </div>
 
+        {/* Modal Footer Controls */}
         <div className="p-3 bg-background border-t flex gap-3 shrink-0 print:hidden z-20">
           <Button onClick={onPrint} className="flex-1 h-10 text-xs font-bold rounded-xl gap-2 shadow-md shadow-primary/20">
             <Printer className="h-4 w-4" /> Print Receipt

@@ -7,14 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ShoppingCart, Plus, Minus, Trash2, Percent, RotateCcw, ArrowRight, Package, User,
-  CheckCircle2, Search, X, Store, ChevronLeft, Banknote, CreditCard, ArrowLeftRight, AlertCircle,
+  CheckCircle2, Search, X, Store, ChevronLeft, Banknote, CreditCard, AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const paymentMethods = [
   { id: "cash", label: "Cash", icon: Banknote, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-  { id: "credit", label: "Credit", icon: CreditCard, color: "text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20" },
-  { id: "partial", label: "Partial", icon: ArrowLeftRight, color: "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20" },
+  { id: "credit", label: "Credit (Khata)", icon: CreditCard, color: "text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20" },
 ];
 
 export default function POSCartDrawer({
@@ -50,7 +49,6 @@ export default function POSCartDrawer({
   useEffect(() => {
     if (paymentMethod === "cash") setPaidAmount(total.toString());
     else if (paymentMethod === "credit") setPaidAmount("0");
-    else setPaidAmount("");
     setCheckoutError("");
   }, [paymentMethod, total]);
 
@@ -58,32 +56,26 @@ export default function POSCartDrawer({
     (s) => s.status === "active" && (s.name.toLowerCase().includes(searchCustomer.toLowerCase()) || s.shopName.toLowerCase().includes(searchCustomer.toLowerCase()))
   );
 
+  const quickAmounts = [100, 500, 1000, 2000, 5000];
+  const inputPaid = parseFloat(paidAmount);
+  const actualPaid = isNaN(inputPaid) ? (paymentMethod === "cash" ? total : 0) : inputPaid;
+  const changeAmount = Math.max(0, actualPaid - total);
+  const creditAmount = paymentMethod === "credit" ? total : Math.max(0, total - actualPaid);
+
   const handleCheckoutSubmit = () => {
     setCheckoutError("");
-    const paid = parseFloat(paidAmount) || 0;
-    const creditAmount = Math.max(0, total - paid);
 
-    if (paymentMethod === "credit" && !selectedShopkeeper) {
-      setCheckoutError("Please select a customer for credit sales");
+    if (creditAmount > 0 && !selectedShopkeeper) {
+      setCheckoutError("Please select a customer because you are adding money to Khata/Credit.");
       return;
-    }
-    if (paymentMethod === "partial") {
-      if (!selectedShopkeeper) { setCheckoutError("Please select a customer for partial payment"); return; }
-      if (paid <= 0) { setCheckoutError("Paid amount must be greater than zero"); return; }
-      if (paid >= total) { setCheckoutError("For partial payment, paid amount must be less than total"); return; }
     }
 
     onCheckout({
-      paymentMethod,
-      paidAmount: paymentMethod === "cash" ? total : paymentMethod === "credit" ? 0 : paid,
-      creditAmount: paymentMethod === "cash" ? 0 : paymentMethod === "credit" ? total : creditAmount,
+      paymentMethod: paymentMethod, // Will just send "cash" or "credit"
+      paidAmount: paymentMethod === "credit" ? 0 : actualPaid,
+      creditAmount: creditAmount,
     });
   };
-
-  const quickAmounts = [100, 500, 1000, 2000, 5000];
-  const paid = parseFloat(paidAmount) || 0;
-  const changeAmount = Math.max(0, paid - total);
-  const creditAmount = Math.max(0, total - paid);
 
   const formatProductUnit = (item) => {
     if (!item.unit || item.unit === "pcs") return "";
@@ -109,6 +101,7 @@ export default function POSCartDrawer({
             className="fixed top-0 right-0 z-[70] h-full w-full sm:w-[420px] bg-background border-l shadow-2xl flex flex-col overflow-hidden"
           >
             <AnimatePresence mode="wait">
+              {/* CART VIEW */}
               {view === "cart" && (
                 <motion.div key="view-cart" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="flex flex-col h-full absolute inset-0 bg-background">
                   <div className="flex h-16 items-center justify-between px-4 border-b shrink-0 bg-card">
@@ -220,6 +213,7 @@ export default function POSCartDrawer({
                 </motion.div>
               )}
 
+              {/* CUSTOMER VIEW */}
               {view === "customer" && (
                 <motion.div key="view-customer" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} className="flex flex-col h-full absolute inset-0 bg-background">
                   <div className="flex h-16 items-center gap-3 px-2 border-b shrink-0 bg-card">
@@ -269,6 +263,7 @@ export default function POSCartDrawer({
                 </motion.div>
               )}
 
+              {/* CHECKOUT VIEW */}
               {view === "checkout" && (
                 <motion.div key="view-checkout" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }} className="flex flex-col h-full absolute inset-0 bg-background">
                   <div className="flex h-16 items-center gap-3 px-2 border-b shrink-0 bg-card">
@@ -300,65 +295,60 @@ export default function POSCartDrawer({
                   <div className="flex-1 overflow-y-auto sidebar-scroll p-4 space-y-5 bg-card">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select Payment Method</Label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-3">
                         {paymentMethods.map((method) => {
                           const Icon = method.icon;
                           const isActive = paymentMethod === method.id;
-                          const isDisabled = (method.id === "credit" || method.id === "partial") && !selectedShopkeeper;
                           return (
-                            <button key={method.id} onClick={() => !isDisabled && setPaymentMethod(method.id)} disabled={isDisabled} className={cn("flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all", isActive ? method.color : "border-transparent bg-muted/50 hover:bg-accent", isDisabled && "opacity-40 cursor-not-allowed")}>
+                            <button key={method.id} onClick={() => setPaymentMethod(method.id)} className={cn("flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all", isActive ? method.color : "border-transparent bg-muted/50 hover:bg-accent")}>
                               <Icon className="h-5 w-5" />
                               <span className="text-[11px] font-bold">{method.label}</span>
                             </button>
                           );
                         })}
                       </div>
-                      {!selectedShopkeeper && (
-                        <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1 pt-1">
-                          <AlertCircle className="h-3 w-3" /> Select a customer first to use Credit/Partial
-                        </p>
-                      )}
                     </div>
 
-                    {paymentMethod !== "credit" && (
+                    {paymentMethod === "cash" && (
                       <div className="space-y-2">
                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          {paymentMethod === "partial" ? "Paying Amount Now" : "Cash Received"}
+                          Cash Received
                         </Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">Rs.</span>
                           <Input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} className="pl-10 h-12 text-lg font-bold rounded-xl bg-muted/30 focus-visible:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" min="0" />
                         </div>
-                        {paymentMethod === "cash" && (
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            {quickAmounts.map((amount) => (
-                              <button key={amount} onClick={() => setPaidAmount(amount.toString())} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all border", parseFloat(paidAmount) === amount ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20" : "hover:bg-accent border-transparent bg-muted/50")}>
-                                {formatCurrency(amount)}
-                              </button>
-                            ))}
-                            <button onClick={() => setPaidAmount(total.toString())} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-transparent">
-                              Exact
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {quickAmounts.map((amount) => (
+                            <button key={amount} onClick={() => setPaidAmount(amount.toString())} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all border", parseFloat(paidAmount) === amount ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20" : "hover:bg-accent border-transparent bg-muted/50")}>
+                              {formatCurrency(amount)}
                             </button>
-                          </div>
-                        )}
+                          ))}
+                          <button onClick={() => setPaidAmount(total.toString())} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-all border border-transparent">
+                            Exact
+                          </button>
+                        </div>
                       </div>
                     )}
 
                     <div className="space-y-2 p-3 rounded-xl bg-muted/30 border border-dashed border-muted-foreground/30">
                       <div className="flex justify-between text-xs"><span className="text-muted-foreground font-medium">Total Bill</span><span className="font-bold">{formatCurrency(total)}</span></div>
-                      {paymentMethod !== "credit" && (
-                        <div className="flex justify-between text-xs"><span className="text-muted-foreground font-medium font-bold text-emerald-600">Paid</span><span className="font-bold text-emerald-600">{formatCurrency(paid)}</span></div>
+                      
+                      {paymentMethod === "cash" && (
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground font-medium">Paid</span><span className="font-bold text-emerald-600">{formatCurrency(actualPaid)}</span></div>
                       )}
-                      {paymentMethod === "cash" && paid > total && (
+                      
+                      {paymentMethod === "cash" && changeAmount > 0 && (
                         <div className="flex justify-between text-xs pt-1 mt-1 border-t border-dashed">
                           <span className="font-bold text-foreground">Change to Return</span>
                           <span className="font-black text-blue-600 text-sm">{formatCurrency(changeAmount)}</span>
                         </div>
                       )}
-                      {(paymentMethod === "credit" || paymentMethod === "partial") && (
+                      
+                      {creditAmount > 0 && (
                         <div className="flex justify-between text-xs pt-1 mt-1 border-t border-dashed">
-                          <span className="font-bold text-foreground">Adding to Credit</span>
-                          <span className="font-black text-orange-600 text-sm">{formatCurrency(paymentMethod === "credit" ? total : creditAmount)}</span>
+                          <span className="font-bold text-foreground">Adding to Khata (Credit)</span>
+                          <span className="font-black text-orange-600 text-sm">{formatCurrency(creditAmount)}</span>
                         </div>
                       )}
                     </div>
