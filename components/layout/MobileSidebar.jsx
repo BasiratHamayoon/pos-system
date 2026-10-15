@@ -24,7 +24,9 @@ import {
   Store, 
   ChevronDown,
   Truck, Factory, 
-  TrendingDown
+  TrendingDown,
+  Ruler,
+  Layers
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -42,6 +44,8 @@ const navItems = [
       { title: "Products", href: "/products", icon: Package },
       { title: "Categories", href: "/categories", icon: Tags },
       { title: "Brands", href: "/brands", icon: Store }, 
+      { title: "Units", href: "/units", icon: Ruler },
+      { title: "Variant Templates", href: "/variant-templates", icon: Layers },
     ],
   },
   {

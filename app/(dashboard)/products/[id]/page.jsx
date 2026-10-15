@@ -6,28 +6,25 @@ import { useRouter, useParams } from "next/navigation";
 import { fetchProductById, editProduct } from "@/store/actions/productActions";
 import { fetchCategories } from "@/store/actions/categoryActions";
 import { fetchBrands } from "@/store/actions/brandActions";
+import { fetchVariantTemplates } from "@/store/actions/variantTemplateActions";
 import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, Package, AlertCircle, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Package, AlertCircle, Plus, Trash2, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const dispatch = useDispatch();
-  
+
   const { categories } = useSelector((state) => state.categories);
   const { brands } = useSelector((state) => state.brands);
+  const { variantTemplates } = useSelector((state) => state.variantTemplates);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    categoryId: "",
-    brandId: "",
-  });
-
+  const [formData, setFormData] = useState({ name: "", categoryId: "", brandId: "" });
   const [variants, setVariants] = useState([]);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +33,8 @@ export default function EditProductPage() {
   useEffect(() => {
     if (categories.length === 0) dispatch(fetchCategories());
     if (brands.length === 0) dispatch(fetchBrands());
-    
+    dispatch(fetchVariantTemplates());
+
     const loadProduct = async () => {
       try {
         const product = await fetchProductById(params.id);
@@ -45,13 +43,11 @@ export default function EditProductPage() {
           categoryId: product.category,
           brandId: product.brand || "",
         });
-        
+
         if (product.variants && product.variants.length > 0) {
           const loadedVariants = product.variants.map(v => ({
             _id: v._id,
-            label: v.label,
-            unitValue: v.unitValue.toString(),
-            unit: v.unit,
+            variantTemplateId: v.variantTemplate || "",
             price: v.price.toString(),
             costPrice: v.costPrice.toString(),
             stock: v.stock.toString(),
@@ -59,7 +55,7 @@ export default function EditProductPage() {
           }));
           setVariants(loadedVariants);
         } else {
-          setVariants([{ label: "Standard", unitValue: "1", unit: "pcs", price: "0", costPrice: "0", stock: "0", minStock: "10" }]);
+          setVariants([{ variantTemplateId: "", price: "0", costPrice: "0", stock: "0", minStock: "10" }]);
         }
       } catch (err) {
         setError(err);
@@ -70,8 +66,10 @@ export default function EditProductPage() {
     loadProduct();
   }, [dispatch, params.id, categories.length, brands.length]);
 
+  const activeTemplates = variantTemplates.filter(v => v.status === "active");
+
   const handleAddVariant = () => {
-    setVariants([...variants, { label: "", unitValue: "1", unit: "pcs", price: "", costPrice: "", stock: "", minStock: "10" }]);
+    setVariants([...variants, { variantTemplateId: "", price: "", costPrice: "", stock: "", minStock: "10" }]);
   };
 
   const handleRemoveVariant = (index) => {
@@ -85,6 +83,10 @@ export default function EditProductPage() {
     setVariants(newVariants);
   };
 
+  const getTemplateDetails = (templateId) => {
+    return activeTemplates.find(t => t._id === templateId);
+  };
+
   const processSubmit = async () => {
     setIsLoading(true);
     setError("");
@@ -94,29 +96,45 @@ export default function EditProductPage() {
       setIsLoading(false);
       return;
     }
-    
+
     for (let v of variants) {
-      if (!v.label || !v.price || !v.costPrice || !v.stock || !v.minStock) {
-        setError("All variant fields including Min Alert are required");
+      if (!v.variantTemplateId) {
+        setError("Please select a variant template for all variants");
         setIsLoading(false);
         return;
       }
+      if (!v.price || !v.costPrice || !v.stock || !v.minStock) {
+        setError("All pricing and stock fields are required");
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const templateIds = variants.map(v => v.variantTemplateId);
+    if (new Set(templateIds).size !== templateIds.length) {
+      setError("You cannot select the same variant template twice");
+      setIsLoading(false);
+      return;
     }
 
     const payload = {
       name: formData.name,
       categoryId: formData.categoryId,
       brandId: formData.brandId || null,
-      variants: variants.map(v => ({
-        ...(v._id ? { _id: v._id } : {}),
-        label: v.label,
-        unitValue: parseFloat(v.unitValue) || 1,
-        unit: v.unit,
-        price: parseFloat(v.price) || 0,
-        costPrice: parseFloat(v.costPrice) || 0,
-        stock: parseInt(v.stock) || 0,
-        minStock: parseInt(v.minStock) || 0,
-      }))
+      variants: variants.map(v => {
+        const template = getTemplateDetails(v.variantTemplateId);
+        return {
+          ...(v._id ? { _id: v._id } : {}),
+          variantTemplateId: v.variantTemplateId,
+          label: template.label,
+          unitValue: template.unitValue,
+          unit: template.unitName,
+          price: parseFloat(v.price) || 0,
+          costPrice: parseFloat(v.costPrice) || 0,
+          stock: parseInt(v.stock) || 0,
+          minStock: parseInt(v.minStock) || 0,
+        };
+      })
     };
 
     try {
@@ -138,16 +156,6 @@ export default function EditProductPage() {
 
   if (fetchLoading) {
     return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
-  }
-
-  if (!formData && !error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-bold">Product Not Found</h2>
-        <Button variant="link" onClick={() => router.push("/products")} className="mt-2">Return to Products</Button>
-      </div>
-    );
   }
 
   return (
@@ -187,15 +195,15 @@ export default function EditProductPage() {
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Master Product Name *</Label>
                   <Input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-xl bg-muted/30" />
                 </div>
-                <div className="space-y-2 md:col-span-1.5">
+                <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category *</Label>
-                  <select required value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <select required value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="flex h-11 w-full rounded-xl border bg-muted/30 px-3 py-2 text-sm">
                     {categories.map((cat) => (<option key={cat._id} value={cat._id}>{cat.name}</option>))}
                   </select>
                 </div>
-                <div className="space-y-2 md:col-span-1.5">
+                <div className="space-y-2 md:col-span-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Brand (Optional)</Label>
-                  <select value={formData.brandId} onChange={(e) => setFormData({ ...formData, brandId: e.target.value })} className="flex h-11 w-full rounded-xl border border-input bg-muted/30 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <select value={formData.brandId} onChange={(e) => setFormData({ ...formData, brandId: e.target.value })} className="flex h-11 w-full rounded-xl border bg-muted/30 px-3 py-2 text-sm">
                     <option value="">No Brand</option>
                     {brands.map((b) => (<option key={b._id} value={b._id}>{b.name}</option>))}
                   </select>
@@ -209,57 +217,75 @@ export default function EditProductPage() {
               <div className="flex items-center justify-between pb-4 border-b">
                 <div>
                   <h3 className="font-bold">Product Variants (Sizes & Pricing)</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Manage existing sizes or add new ones</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Select templates and update pricing & stock</p>
                 </div>
                 <Button type="button" onClick={handleAddVariant} variant="outline" className="gap-2 h-9 rounded-lg text-xs font-bold">
-                  <Plus className="h-3.5 w-3.5" /> Add Size Variant
+                  <Plus className="h-3.5 w-3.5" /> Add Variant
                 </Button>
               </div>
 
               <div className="space-y-4">
                 <AnimatePresence>
-                  {variants.map((variant, index) => (
-                    <motion.div key={index} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="p-4 rounded-xl border-2 bg-muted/10 relative">
-                      {variants.length > 1 && (
-                        <button type="button" onClick={() => handleRemoveVariant(index)} className="absolute -top-3 -right-3 h-7 w-7 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition-transform z-10">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-8 gap-4">
-                        <div className="space-y-1.5 md:col-span-2">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Variant Name / Label *</Label>
-                          <Input required value={variant.label} onChange={(e) => updateVariant(index, 'label', e.target.value)} className="h-9 text-xs bg-background" />
+                  {variants.map((variant, index) => {
+                    const selectedTemplate = getTemplateDetails(variant.variantTemplateId);
+                    return (
+                      <motion.div key={index} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="p-4 rounded-xl border-2 bg-muted/10 relative space-y-4">
+                        {variants.length > 1 && (
+                          <button type="button" onClick={() => handleRemoveVariant(index)} className="absolute -top-3 -right-3 h-7 w-7 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-md hover:scale-110 transition-transform z-10">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+
+                        <div className="flex items-end gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                          <Layers className="h-4 w-4 text-primary mt-2 shrink-0" />
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-[10px] font-bold text-primary uppercase">Select Variant Template *</Label>
+                            <select required value={variant.variantTemplateId} onChange={(e) => updateVariant(index, 'variantTemplateId', e.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-xs font-semibold">
+                              <option value="" disabled>-- Choose a variant --</option>
+                              {activeTemplates.map(t => (
+                                <option key={t._id} value={t._id}>
+                                  {t.label} ({t.unitValue} {t.unitSymbol})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Size</Label>
-                          <Input type="number" step="0.01" min="0" value={variant.unitValue} onChange={(e) => updateVariant(index, 'unitValue', e.target.value)} className="h-9 text-xs bg-background" />
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-muted-foreground">Sale Price *</Label>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">Rs</span>
+                              <Input required type="number" step="0.01" min="0" value={variant.price} onChange={(e) => updateVariant(index, 'price', e.target.value)} className="h-10 text-xs bg-background pl-7" />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-muted-foreground">Cost Price *</Label>
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">Rs</span>
+                              <Input required type="number" step="0.01" min="0" value={variant.costPrice} onChange={(e) => updateVariant(index, 'costPrice', e.target.value)} className="h-10 text-xs bg-background pl-7" />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-muted-foreground">Current Stock *</Label>
+                            <Input required type="number" min="0" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} className="h-10 text-xs bg-background" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-muted-foreground">Min Stock Alert *</Label>
+                            <Input required type="number" min="0" value={variant.minStock} onChange={(e) => updateVariant(index, 'minStock', e.target.value)} className="h-10 text-xs bg-background" />
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Unit</Label>
-                          <select value={variant.unit} onChange={(e) => updateVariant(index, 'unit', e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-                            <option value="pcs">Pcs</option><option value="pack">Pack</option><option value="box">Box</option><option value="kg">KG</option><option value="g">g</option><option value="l">L</option><option value="ml">ml</option>
-                          </select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Sale Price *</Label>
-                          <Input required type="number" step="0.01" min="0" value={variant.price} onChange={(e) => updateVariant(index, 'price', e.target.value)} className="h-9 text-xs bg-background" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Cost Price *</Label>
-                          <Input required type="number" step="0.01" min="0" value={variant.costPrice} onChange={(e) => updateVariant(index, 'costPrice', e.target.value)} className="h-9 text-xs bg-background" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Current Stock *</Label>
-                          <Input required type="number" min="0" value={variant.stock} onChange={(e) => updateVariant(index, 'stock', e.target.value)} className="h-9 text-xs bg-background" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-muted-foreground">Min Alert *</Label>
-                          <Input required type="number" min="0" value={variant.minStock} onChange={(e) => updateVariant(index, 'minStock', e.target.value)} className="h-9 text-xs bg-background" />
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
+
+                        {selectedTemplate && (
+                          <div className="flex flex-wrap gap-4 pt-3 border-t text-[11px] text-muted-foreground">
+                            <span><strong className="text-foreground">Label:</strong> {selectedTemplate.label}</span>
+                            <span><strong className="text-foreground">Size:</strong> {selectedTemplate.unitValue}</span>
+                            <span><strong className="text-foreground">Unit:</strong> {selectedTemplate.unitName} ({selectedTemplate.unitSymbol})</span>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
               </div>
 

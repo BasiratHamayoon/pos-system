@@ -28,7 +28,6 @@ export default function ProductsPage() {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  // Calculate stats based on variants
   const totalProducts = products.length;
   let totalInventoryValue = 0;
   let lowStockCount = 0;
@@ -83,9 +82,21 @@ export default function ProductsPage() {
     return `${formatCurrency(min)} - ${formatCurrency(max)}`;
   };
 
-  const getTotalStock = (variants) => {
-    if (!variants) return 0;
-    return variants.reduce((sum, v) => sum + v.stock, 0);
+  const getStockDisplay = (variants) => {
+    if (!variants || variants.length === 0) return { total: 0, details: [] };
+    const details = variants.map(v => ({
+      label: v.label,
+      stock: v.stock,
+      unit: v.unitSymbol || v.unit || '',
+      status: v.status,
+    }));
+    const total = variants.reduce((sum, v) => sum + v.stock, 0);
+    return { total, details };
+  };
+
+  const getVariantLabels = (variants) => {
+    if (!variants || variants.length === 0) return [];
+    return variants.map(v => v.label);
   };
 
   return (
@@ -137,48 +148,77 @@ export default function ProductsPage() {
                   <th className="px-4 py-3 font-semibold text-muted-foreground">Category / Brand</th>
                   <th className="px-4 py-3 font-semibold text-muted-foreground">Variants</th>
                   <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Price Range</th>
-                  <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Total Stock</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Stock</th>
                   <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filteredProducts.map((product) => (
-                  <tr key={product._id} className="hover:bg-accent/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-                          <Package className="h-5 w-5" />
+                {filteredProducts.map((product) => {
+                  const stockInfo = getStockDisplay(product.variants);
+                  const variantLabels = getVariantLabels(product.variants);
+                  return (
+                    <tr key={product._id} className="hover:bg-accent/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                            <Package className="h-5 w-5" />
+                          </div>
+                          <p className="font-bold truncate max-w-[200px]">{product.name}</p>
                         </div>
-                        <p className="font-bold truncate max-w-[200px]">{product.name}</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-md bg-muted text-[10px] font-medium">{product.categoryName}</span>
-                        {product.brandName && <span className="text-[10px] text-muted-foreground font-semibold">{product.brandName}</span>}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className="font-bold bg-background">{product.variants?.length || 0} sizes</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right font-bold text-primary">
-                      {getPriceDisplay(product.variants)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="font-bold text-xs">{getTotalStock(product.variants)} Units</span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => router.push(`/products/${product._id}`)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm(product._id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-md bg-muted text-[10px] font-medium">{product.categoryName}</span>
+                          {product.brandName && <span className="text-[10px] text-muted-foreground font-semibold">{product.brandName}</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {variantLabels.slice(0, 3).map((label, i) => (
+                            <Badge key={i} variant="outline" className="text-[9px] font-semibold bg-background">{label}</Badge>
+                          ))}
+                          {variantLabels.length > 3 && (
+                            <Badge variant="secondary" className="text-[9px] font-bold">+{variantLabels.length - 3}</Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-primary">
+                        {getPriceDisplay(product.variants)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="font-black text-sm">{stockInfo.total}</span>
+                          <div className="flex flex-wrap justify-center gap-1">
+                            {stockInfo.details.map((d, i) => (
+                              <span
+                                key={i}
+                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                  d.status === 'out_of_stock'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    : d.status === 'low_stock'
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                }`}
+                              >
+                                {d.stock} {d.unit}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => router.push(`/products/${product._id}`)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm(product._id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {filteredProducts.length === 0 && (
                   <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No products found. Adjust your search or add a new product.</td></tr>
                 )}

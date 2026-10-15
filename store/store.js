@@ -12,8 +12,10 @@ import reportReducer from "./slices/reportSlice";
 import settingsReducer from "./slices/settingsSlice";
 import themeReducer from "./slices/themeSlice";
 import analyticsReducer from "./slices/analyticsSlice";
-import supplierReducer from "./slices/supplierSlice"; // NEW
-import purchaseReducer from "./slices/purchaseSlice"; // NEW
+import supplierReducer from "./slices/supplierSlice";
+import purchaseReducer from "./slices/purchaseSlice";
+import unitReducer from "./slices/unitSlice";
+import variantTemplateReducer from "./slices/variantTemplateSlice";
 
 export const store = configureStore({
   reducer: {
@@ -30,7 +32,9 @@ export const store = configureStore({
     settings: settingsReducer,
     theme: themeReducer,
     analytics: analyticsReducer,
-    suppliers: supplierReducer, 
+    suppliers: supplierReducer,
     purchases: purchaseReducer,
+    units: unitReducer,
+    variantTemplates: variantTemplateReducer,
   },
 });
