@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogFooter,
   DialogDescription,
@@ -28,6 +27,7 @@ import {
   User,
   History,
   Eye,
+  CheckCircle2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -50,6 +50,7 @@ export default function CreditPage() {
   const activeCreditRecords = credits.filter((c) => c.totalCredit > 0 || c.status === "paid");
 
   const totalOutstanding = activeCreditRecords.reduce((sum, c) => sum + c.totalCredit, 0);
+  const totalCollected = activeCreditRecords.reduce((sum, c) => sum + (c.totalPaid || 0), 0);
   const overdueCount = activeCreditRecords.filter((c) => c.status === "overdue").length;
   const pendingCount = activeCreditRecords.filter((c) => c.status === "pending").length;
 
@@ -63,6 +64,7 @@ export default function CreditPage() {
 
   const stats = [
     { title: "Total Outstanding", value: formatCurrency(totalOutstanding), icon: CreditCard, color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+    { title: "Total Collected", value: formatCurrency(totalCollected), icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
     { title: "Active Accounts", value: pendingCount + overdueCount, icon: User, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
     { title: "Overdue Accounts", value: overdueCount, icon: AlertTriangle, color: "text-red-600 dark:text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
   ];
@@ -107,17 +109,17 @@ export default function CreditPage() {
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         {stats.map((stat, index) => (
           <motion.div key={stat.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
             <Card className={`border-2 ${stat.border} shadow-sm h-full`}>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} ${stat.color} shrink-0`}>
-                  <stat.icon className="h-6 w-6" />
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stat.bg} ${stat.color} shrink-0`}>
+                  <stat.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">{stat.title}</p>
-                  <p className="text-2xl font-black tracking-tight mt-0.5 truncate">{stat.value}</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider truncate">{stat.title}</p>
+                  <p className="text-xl font-black tracking-tight mt-0.5 truncate">{stat.value}</p>
                 </div>
               </CardContent>
             </Card>
@@ -163,8 +165,9 @@ export default function CreditPage() {
               <thead className="sticky top-0 bg-muted/40 backdrop-blur-md z-10 border-b">
                 <tr>
                   <th className="px-4 py-3 font-semibold text-muted-foreground">Customer</th>
-                  <th className="px-4 py-3 font-semibold text-muted-foreground">Outstanding Balance</th>
-                  <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Invoices Linked</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">Outstanding</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground">Total Paid</th>
+                  <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Open Invoices</th>
                   <th className="px-4 py-3 font-semibold text-muted-foreground">Last Payment</th>
                   <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Status</th>
                   <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Actions</th>
@@ -187,8 +190,13 @@ export default function CreditPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <p className={cn("font-black text-lg tracking-tight", credit.totalCredit > 0 ? "text-orange-600 dark:text-orange-500" : "text-emerald-600 dark:text-emerald-500")}>
+                      <p className={cn("font-black text-base tracking-tight", credit.totalCredit > 0 ? "text-orange-600 dark:text-orange-500" : "text-emerald-600 dark:text-emerald-500")}>
                         {formatCurrency(credit.totalCredit)}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-sm text-emerald-600 dark:text-emerald-500">
+                        {formatCurrency(credit.totalPaid || 0)}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -199,7 +207,7 @@ export default function CreditPage() {
                     <td className="px-4 py-3">
                       {credit.lastPaymentDate ? (
                         <div>
-                          <p className="font-bold text-emerald-600">{formatCurrency(credit.lastPayment)}</p>
+                          <p className="font-bold text-emerald-600 text-sm">{formatCurrency(credit.lastPayment)}</p>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <History className="h-3 w-3" /> {formatDate(credit.lastPaymentDate)}
                           </p>
@@ -227,7 +235,7 @@ export default function CreditPage() {
                 ))}
                 {filteredCredits.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                       No credit records found.
                     </td>
                   </tr>

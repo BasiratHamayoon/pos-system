@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Store, AlertCircle, CreditCard, Banknote, History, FileText, ArrowRightLeft, Calendar, AlertTriangle } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { ArrowLeft, Store, AlertCircle, CreditCard, Banknote, History, FileText, ArrowRightLeft, Calendar, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CreditDetailPage() {
@@ -26,7 +26,7 @@ export default function CreditDetailPage() {
 
   const [credit, setCredit] = useState(null);
   const [linkedSales, setLinkedSales] = useState([]);
-  
+
   const [paymentModal, setPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentError, setPaymentError] = useState("");
@@ -41,6 +41,7 @@ export default function CreditDetailPage() {
     const foundCredit = credits.find((c) => c._id === params.id);
     if (foundCredit) {
       setCredit(foundCredit);
+      // Only show invoices still in the credit record (open ones)
       const matchedSales = sales.filter((s) => foundCredit.invoices?.includes(s.invoiceNo));
       setLinkedSales(matchedSales.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
     }
@@ -107,28 +108,46 @@ export default function CreditDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 min-h-0 items-stretch">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="min-h-0 flex flex-col gap-5">
+          {/* Outstanding */}
           <Card className="border-2 shadow-sm flex flex-col">
             <CardHeader className="border-b bg-muted/10 py-4 px-5 shrink-0">
-              <CardTitle className="text-sm font-bold flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" /> Credit Summary</CardTitle>
+              <CardTitle className="text-sm font-bold flex items-center gap-2"><CreditCard className="h-4 w-4 text-orange-600" /> Outstanding Balance</CardTitle>
             </CardHeader>
             <CardContent className="p-5 flex-1 flex flex-col justify-center">
-              <div className="text-center py-4">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Total Outstanding</p>
-                <p className={cn("text-5xl font-black tracking-tight", credit.totalCredit > 0 ? "text-orange-600 dark:text-orange-500" : "text-emerald-600 dark:text-emerald-500")}>
+              <div className="text-center py-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Total Outstanding</p>
+                <p className={cn("text-4xl font-black tracking-tight", credit.totalCredit > 0 ? "text-orange-600 dark:text-orange-500" : "text-emerald-600 dark:text-emerald-500")}>
                   {formatCurrency(credit.totalCredit)}
                 </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Total Paid */}
+          <Card className="border-2 shadow-sm flex flex-col">
+            <CardHeader className="border-b bg-muted/10 py-4 px-5 shrink-0">
+              <CardTitle className="text-sm font-bold flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Total Collected</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 flex-1 flex flex-col justify-center">
+              <div className="text-center py-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">All-Time Payments</p>
+                <p className="text-4xl font-black tracking-tight text-emerald-600 dark:text-emerald-500">
+                  {formatCurrency(credit.totalPaid || 0)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Last Activity */}
           <Card className="border-2 shadow-sm flex flex-col flex-1">
             <CardHeader className="border-b bg-muted/10 py-4 px-5 shrink-0">
-              <CardTitle className="text-sm font-bold flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Last Activity</CardTitle>
+              <CardTitle className="text-sm font-bold flex items-center gap-2"><History className="h-4 w-4 text-primary" /> Last Payment</CardTitle>
             </CardHeader>
             <CardContent className="p-5 flex-1 space-y-4">
               {credit.lastPaymentDate ? (
                 <>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount Paid</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount</p>
                     <p className="font-bold text-lg text-emerald-600 dark:text-emerald-500">{formatCurrency(credit.lastPayment)}</p>
                   </div>
                   <Separator />
@@ -147,11 +166,12 @@ export default function CreditDetailPage() {
           </Card>
         </motion.div>
 
+        {/* Linked Invoices */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2 min-h-0 flex">
           <Card className="border-2 shadow-sm w-full flex flex-col min-h-0 overflow-hidden">
             <CardHeader className="border-b bg-muted/10 py-4 px-5 shrink-0">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" /> Linked Invoices
+                <FileText className="h-4 w-4 text-primary" /> Open Invoices
                 <span className="ml-auto text-[11px] font-semibold text-muted-foreground">{linkedSales.length} invoice{linkedSales.length === 1 ? "" : "s"}</span>
               </CardTitle>
             </CardHeader>
@@ -162,25 +182,34 @@ export default function CreditDetailPage() {
                     <tr>
                       <th className="px-5 py-3 font-semibold text-muted-foreground">Invoice</th>
                       <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Date</th>
-                      <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Total Bill</th>
-                      <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Credit Added</th>
+                      <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Total</th>
+                      <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Paid</th>
+                      <th className="px-5 py-3 font-semibold text-muted-foreground text-right">Remaining</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {linkedSales.map((sale) => (
                       <tr key={sale._id} onClick={() => router.push(`/sales/${sale._id}`)} className="hover:bg-accent/50 transition-colors cursor-pointer group">
-                        <td className="px-5 py-3.5"><p className="font-bold text-sm group-hover:text-primary transition-colors">{sale.invoiceNo}</p></td>
+                        <td className="px-5 py-3.5">
+                          <p className="font-bold text-sm group-hover:text-primary transition-colors">{sale.invoiceNo}</p>
+                        </td>
                         <td className="px-4 py-3.5 text-center text-xs">{formatDate(sale.createdAt)}</td>
                         <td className="px-4 py-3.5 text-right font-medium">{formatCurrency(sale.totalAmount)}</td>
-                        <td className="px-5 py-3.5 text-right"><span className="font-bold text-orange-600 dark:text-orange-500">{formatCurrency(sale.creditAmount)}</span></td>
+                        <td className="px-4 py-3.5 text-right">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-500">{formatCurrency(sale.paidAmount || 0)}</span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <span className="font-bold text-orange-600 dark:text-orange-500">{formatCurrency(sale.creditAmount || 0)}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
                 <div className="h-full min-h-[280px] flex flex-col items-center justify-center p-8 text-center opacity-70">
-                  <FileText className="h-12 w-12 text-muted-foreground mb-3" />
-                  <p className="text-sm font-bold">No Invoices Linked</p>
+                  <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-3" />
+                  <p className="text-sm font-bold">All Invoices Settled</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">No open credit invoices for this customer</p>
                 </div>
               )}
             </CardContent>

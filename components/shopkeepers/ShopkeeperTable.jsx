@@ -1,127 +1,111 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { Eye, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, Store, Package } from "lucide-react";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { formatCurrency } from "@/lib/utils";
 
 export default function ShopkeeperTable({ shopkeepers, isLoading, onDelete }) {
   const router = useRouter();
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-full py-10">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!shopkeepers || shopkeepers.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <p className="text-sm font-medium">No shopkeepers found</p>
+        <p className="text-xs mt-1">Add your first customer to get started</p>
       </div>
     );
   }
 
   return (
-    <table className="w-full text-sm text-left">
-      <thead className="sticky top-0 bg-muted/40 backdrop-blur-md z-10 border-b">
-        <tr>
-          <th className="px-4 py-3 font-semibold text-muted-foreground">Customer</th>
-          <th className="px-4 py-3 font-semibold text-muted-foreground">Shop Details</th>
-          <th className="px-4 py-3 font-semibold text-muted-foreground text-center">Orders</th>
-          <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Total Sales</th>
-          <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Credit Balance</th>
-          <th className="px-4 py-3 font-semibold text-muted-foreground">Status</th>
-          <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y">
-        {shopkeepers.map((shopkeeper) => {
-          const id = shopkeeper._id || shopkeeper.id;
-          return (
-            <tr key={id} className="hover:bg-accent/50 transition-colors">
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs shrink-0">
-                    {shopkeeper.name ? shopkeeper.name.split(" ").map((n) => n[0]).join("").slice(0, 2) : "CU"}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-bold truncate">{shopkeeper.name}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                      {shopkeeper.phone || "No phone"}
-                    </p>
-                  </div>
+    <Table>
+      <TableHeader>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="text-xs font-bold uppercase tracking-wider">Customer</TableHead>
+          <TableHead className="text-xs font-bold uppercase tracking-wider hidden md:table-cell">Shop</TableHead>
+          <TableHead className="text-xs font-bold uppercase tracking-wider hidden sm:table-cell">Phone</TableHead>
+          <TableHead className="text-xs font-bold uppercase tracking-wider">Status</TableHead>
+          <TableHead className="text-xs font-bold uppercase tracking-wider text-right hidden sm:table-cell">Credit</TableHead>
+          <TableHead className="text-xs font-bold uppercase tracking-wider text-right w-[100px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {shopkeepers.map((s) => (
+          <TableRow key={s._id} className="group">
+            <TableCell>
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                  {s.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "SK"}
                 </div>
-              </td>
-              <td className="px-4 py-3">
-                <div className="min-w-0 max-w-[200px]">
-                  <p className="font-semibold flex items-center gap-1.5 truncate">
-                    <Store className="h-3 w-3 text-muted-foreground shrink-0" />
-                    <span className="truncate">{shopkeeper.shopName}</span>
-                  </p>
-                  <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                    {shopkeeper.address || "No address"}
-                  </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{s.name}</p>
+                  <p className="text-xs text-muted-foreground truncate md:hidden">{s.shopName}</p>
                 </div>
-              </td>
-              <td className="px-4 py-3 text-center">
-                <Badge variant="outline" className="font-bold">
-                  <Package className="h-3 w-3 mr-1" />
-                  {shopkeeper.salesCount || 0}
-                </Badge>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <p className="font-bold">{formatCurrency(shopkeeper.totalPurchases || 0)}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Since {formatDate(shopkeeper.createdAt || new Date())}
-                </p>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <span className={cn(
-                  "font-bold",
-                  shopkeeper.totalCredit > 0 ? "text-orange-600" : "text-muted-foreground"
-                )}>
-                  {formatCurrency(shopkeeper.totalCredit || 0)}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <Badge
-                  variant="secondary"
-                  className={
-                    shopkeeper.status === "active"
-                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                      : "bg-muted text-muted-foreground"
-                  }
+              </div>
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
+              <span className="text-sm text-muted-foreground">{s.shopName || "—"}</span>
+            </TableCell>
+            <TableCell className="hidden sm:table-cell">
+              <span className="text-sm text-muted-foreground">{s.phone || "—"}</span>
+            </TableCell>
+            <TableCell>
+              <Badge
+                variant="outline"
+                className={
+                  s.status === "active"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold"
+                    : "bg-gray-50 text-gray-500 border-gray-200 text-[10px] font-bold"
+                }
+              >
+                {s.status || "active"}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right hidden sm:table-cell">
+              <span className={`text-sm font-semibold ${(s.totalCredit || 0) > 0 ? "text-red-500" : "text-emerald-600"}`}>
+                {formatCurrency(s.totalCredit || 0)}
+              </span>
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex items-center justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary hover:bg-primary/10"
+                  onClick={() => router.push(`/shopkeepers/${s._id}`)}
                 >
-                  {shopkeeper.status || "active"}
-                </Badge>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-primary hover:bg-primary/10"
-                    onClick={() => router.push(`/shopkeepers/${id}`)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                    onClick={() => onDelete(id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-        {shopkeepers.length === 0 && (
-          <tr>
-            <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-              No shopkeepers found. Try adjusting your filters.
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                  onClick={() => onDelete(s._id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

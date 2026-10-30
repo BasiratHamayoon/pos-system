@@ -13,45 +13,45 @@ export const fetchShopkeepers = () => async (dispatch) => {
   try {
     const { data } = await api.get('/shopkeepers');
     dispatch(setShopkeepers(data));
-  } catch (error) {
-    dispatch(setShopkeepersError(error.response?.data?.message || error.message));
+  } catch (err) {
+    dispatch(setShopkeepersError(err.response?.data?.message || err.message));
   }
 };
 
-export const fetchShopkeeperById = async (id) => {
+export const createShopkeeper = (shopkeeperData) => async (dispatch) => {
   try {
-    const { data } = await api.get(`/shopkeepers/${id}`);
+    const { data } = await api.post('/shopkeepers', shopkeeperData);
+    dispatch(addShopkeeper(data));
     return data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.message);
   }
 };
 
-export const createShopkeeper = (data) => async (dispatch) => {
+export const editShopkeeper = (id, shopkeeperData) => async (dispatch) => {
   try {
-    const response = await api.post('/shopkeepers', data);
-    dispatch(addShopkeeper(response.data));
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
+    const { data } = await api.put(`/shopkeepers/${id}`, shopkeeperData);
+    dispatch(updateShopkeeperInList(data));
+    return data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.message);
   }
 };
 
-export const editShopkeeper = (id, data) => async (dispatch) => {
-  try {
-    const response = await api.put(`/shopkeepers/${id}`, data);
-    dispatch(updateShopkeeperInList(response.data));
-    return response.data;
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
-  }
-};
-
-export const removeShopkeeper = (id) => async (dispatch) => {
+export const deleteShopkeeper = (id) => async (dispatch) => {
   try {
     await api.delete(`/shopkeepers/${id}`);
     dispatch(deleteShopkeeperFromList(id));
-  } catch (error) {
-    throw error.response?.data?.message || error.message;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.message);
+  }
+};
+
+export const fetchShopkeeperHistory = async (id) => {
+  try {
+    const { data } = await api.get(`/shopkeepers/${id}/history`);
+    return data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.message);
   }
 };

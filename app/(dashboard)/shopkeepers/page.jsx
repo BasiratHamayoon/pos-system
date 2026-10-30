@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
-import { fetchShopkeepers, removeShopkeeper } from "@/store/actions/shopkeeperActions";
+import { fetchShopkeepers, deleteShopkeeper } from "@/store/actions/shopkeeperActions";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ export default function ShopkeepersPage() {
     if (!deleteConfirm) return;
     setDeleteLoading(true);
     try {
-      await dispatch(removeShopkeeper(deleteConfirm));
+      await dispatch(deleteShopkeeper(deleteConfirm));
       setDeleteConfirm(null);
     } catch (err) {
       alert(err);

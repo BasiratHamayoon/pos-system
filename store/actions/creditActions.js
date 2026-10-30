@@ -5,6 +5,7 @@ import {
   setCreditsError,
   updateCreditInList,
 } from '../slices/creditSlice';
+import { fetchSales } from './salesActions';   // ← ADD this import
 
 export const fetchCredits = () => async (dispatch) => {
   dispatch(setCreditsLoading());
@@ -32,6 +33,8 @@ export const makePayment = (shopkeeperId, amount) => async (dispatch) => {
       amount: Number(amount),
     });
     dispatch(updateCreditInList(data));
+    // Re-fetch sales so invoice credit/paid amounts & statuses stay in sync
+    dispatch(fetchSales());
     return data;
   } catch (error) {
     throw error.response?.data?.message || error.message;
