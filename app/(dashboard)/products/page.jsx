@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { fetchProducts, removeProduct } from "@/store/actions/productActions";
@@ -24,9 +24,16 @@ export default function ProductsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const initializedRef = useRef(false);
+  const deleteLockRef = useRef(false);
+
   useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    if (products.length === 0) {
+      dispatch(fetchProducts());
+    }
+  }, [dispatch, products.length]);
 
   const totalProducts = products.length;
   let totalInventoryValue = 0;
@@ -61,6 +68,8 @@ export default function ProductsPage() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
+    if (deleteLockRef.current) return;
+    deleteLockRef.current = true;
     setDeleteLoading(true);
     try {
       await dispatch(removeProduct(deleteConfirm));
@@ -69,6 +78,7 @@ export default function ProductsPage() {
       alert(err);
     } finally {
       setDeleteLoading(false);
+      deleteLockRef.current = false;
     }
   };
 

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
 import { fetchCategoryById, editCategory } from "@/store/actions/categoryActions";
-import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,13 @@ export default function EditCategoryPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const initializedRef = useRef(false);
+  const submitLockRef = useRef(false);
+
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const loadCategory = async () => {
       try {
         const category = await fetchCategoryById(params.id);
@@ -36,24 +41,28 @@ export default function EditCategoryPage() {
     loadCategory();
   }, [params.id]);
 
-  const processSubmit = async (data) => {
-    setIsLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitLockRef.current || isLoading) return;
+
     setError("");
+
+    if (!formData?.name) {
+      setError("Category name is required");
+      return;
+    }
+
+    submitLockRef.current = true;
+    setIsLoading(true);
     try {
-      await dispatch(editCategory(params.id, data));
+      await dispatch(editCategory(params.id, formData));
       router.push("/categories");
     } catch (err) {
       setError(err);
     } finally {
       setIsLoading(false);
+      submitLockRef.current = false;
     }
-  };
-
-  const debouncedSubmit = useCallback(debounce((d) => processSubmit(d), 500), [dispatch, params.id]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    debouncedSubmit(formData);
   };
 
   if (fetchLoading) {

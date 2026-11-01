@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { fetchBrands, removeBrand } from "@/store/actions/brandActions";
@@ -22,7 +22,14 @@ export default function BrandsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(() => { dispatch(fetchBrands()); }, [dispatch]);
+  const initializedRef = useRef(false);
+  const deleteLockRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    if (brands.length === 0) dispatch(fetchBrands());
+  }, [dispatch, brands.length]);
 
   const totalBrands = brands.length;
   const activeBrands = brands.filter((b) => b.status === "active").length;
@@ -39,12 +46,14 @@ export default function BrandsPage() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
+    if (deleteLockRef.current) return;
+    deleteLockRef.current = true;
     setDeleteLoading(true);
     try {
       await dispatch(removeBrand(deleteConfirm));
       setDeleteConfirm(null);
     } catch (err) { alert(err); } 
-    finally { setDeleteLoading(false); }
+    finally { setDeleteLoading(false); deleteLockRef.current = false; }
   };
 
   return (

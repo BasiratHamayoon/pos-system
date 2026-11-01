@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginUser } from "@/store/actions/authActions";
 import { clearError } from "@/store/slices/authSlice";
-import { debounce } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +27,7 @@ export default function LoginPage() {
   const dispatch = useDispatch();
   const router = useRouter();
   const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -35,17 +35,17 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router]);
 
-  const processSubmit = async (emailVal, passwordVal) => {
-    dispatch(clearError());
-    dispatch(loginUser({ email: emailVal, password: passwordVal }));
-  };
-
-  const debouncedSubmit = useCallback(debounce((e, p) => processSubmit(e, p), 500), []);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
-    debouncedSubmit(email, password);
+    if (submittingRef.current || isLoading) return;
+    submittingRef.current = true;
+    dispatch(clearError());
+    try {
+      await dispatch(loginUser({ email, password }));
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   return (

@@ -26,7 +26,7 @@ import POSClearConfirmDialog from "@/components/pos/POSClearConfirmDialog";
 
 export default function POSPage() {
   const dispatch = useDispatch();
-  const { products } = useSelector((state) => state.products);
+  const { products, isLoading: productsLoading } = useSelector((state) => state.products);
   const { categories } = useSelector((state) => state.categories);
   const { shopkeepers } = useSelector((state) => state.shopkeepers);
   const { cart, cartShopkeeper } = useSelector((state) => state.sales);
@@ -46,8 +46,11 @@ export default function POSPage() {
   const [checkoutErrorMessage, setCheckoutErrorMessage] = useState("");
 
   const searchRef = useRef(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     dispatch(fetchProducts());
     dispatch(fetchCategories());
     dispatch(fetchShopkeepers());
@@ -145,7 +148,11 @@ export default function POSPage() {
     setCheckoutErrorMessage("");
   };
 
+  const checkoutLockRef = useRef(false);
+
   const handleCheckout = async (paymentData) => {
+    if (checkoutLockRef.current) return;
+    checkoutLockRef.current = true;
     setIsCheckoutLoading(true);
     setCheckoutErrorMessage("");
 
@@ -176,15 +183,18 @@ export default function POSPage() {
       dispatch(clearCart());
       setDiscount(0);
 
-      dispatch(fetchProducts());
-      dispatch(fetchShopkeepers());
-      dispatch(fetchCredits());
+      await Promise.all([
+        dispatch(fetchProducts()),
+        dispatch(fetchShopkeepers()),
+        dispatch(fetchCredits()),
+      ]);
 
       setTimeout(() => setSuccessModalOpen(true), 300);
     } catch (err) {
       setCheckoutErrorMessage(typeof err === "string" ? err : err.message || "Failed to process sale");
-    } font: {
+    } finally {
       setIsCheckoutLoading(false);
+      checkoutLockRef.current = false;
     }
   };
 
@@ -223,12 +233,18 @@ export default function POSPage() {
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl pb-24 pr-1">
-        <POSProductGrid
-          products={posItems}
-          viewMode={viewMode}
-          cart={cart}
-          onAddToCart={handleAddToCart}
-        />
+        {productsLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        ) : (
+          <POSProductGrid
+            products={posItems}
+            viewMode={viewMode}
+            cart={cart}
+            onAddToCart={handleAddToCart}
+          />
+        )}
       </div>
 
       <POSFloatingCartButton

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { fetchUnits, removeUnit } from "@/store/actions/unitActions";
@@ -22,7 +22,14 @@ export default function UnitsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  useEffect(() => { dispatch(fetchUnits()); }, [dispatch]);
+  const initializedRef = useRef(false);
+  const deleteLockRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    if (units.length === 0) dispatch(fetchUnits());
+  }, [dispatch, units.length]);
 
   const totalUnits = units.length;
   const activeUnits = units.filter((u) => u.status === "active").length;
@@ -40,12 +47,14 @@ export default function UnitsPage() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
+    if (deleteLockRef.current) return;
+    deleteLockRef.current = true;
     setDeleteLoading(true);
     try {
       await dispatch(removeUnit(deleteConfirm));
       setDeleteConfirm(null);
     } catch (err) { alert(err); }
-    finally { setDeleteLoading(false); }
+    finally { setDeleteLoading(false); deleteLockRef.current = false; }
   };
 
   return (

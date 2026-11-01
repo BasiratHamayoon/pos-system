@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { fetchCategories, removeCategory } from "@/store/actions/categoryActions";
@@ -39,10 +39,15 @@ export default function CategoriesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const initializedRef = useRef(false);
+  const deleteLockRef = useRef(false);
+
   useEffect(() => {
-    dispatch(fetchCategories());
-    dispatch(fetchProducts());
-  }, [dispatch]);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    if (categories.length === 0) dispatch(fetchCategories());
+    if (products.length === 0) dispatch(fetchProducts());
+  }, [dispatch, categories.length, products.length]);
 
   const totalCategories = categories.length;
   const activeCategories = categories.filter((c) => c.status === "active").length;
@@ -94,6 +99,8 @@ export default function CategoriesPage() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
+    if (deleteLockRef.current) return;
+    deleteLockRef.current = true;
     setDeleteLoading(true);
     try {
       await dispatch(removeCategory(deleteConfirm));
@@ -102,6 +109,7 @@ export default function CategoriesPage() {
       alert(err);
     } finally {
       setDeleteLoading(false);
+      deleteLockRef.current = false;
     }
   };
 

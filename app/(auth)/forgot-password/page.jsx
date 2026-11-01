@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { forgotPassword } from "@/store/actions/authActions";
-import { debounce } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,26 +16,24 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const submittingRef = useRef(false);
 
-  const processSubmit = async (emailVal) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    if (submittingRef.current || isLoading) return;
+    submittingRef.current = true;
     setIsLoading(true);
     setError("");
     try {
-      await forgotPassword(emailVal);
+      await forgotPassword(email);
       setIsSubmitted(true);
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Something went wrong");
     } finally {
       setIsLoading(false);
+      submittingRef.current = false;
     }
-  };
-
-  const debouncedSubmit = useCallback(debounce((e) => processSubmit(e), 500), []);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!email) return;
-    debouncedSubmit(email);
   };
 
   return (

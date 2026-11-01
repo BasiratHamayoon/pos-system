@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter, useParams } from "next/navigation";
 import { fetchProductById, editProduct } from "@/store/actions/productActions";
 import { fetchCategories } from "@/store/actions/categoryActions";
 import { fetchBrands } from "@/store/actions/brandActions";
 import { fetchVariantTemplates } from "@/store/actions/variantTemplateActions";
-import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,10 +29,16 @@ export default function EditProductPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const initializedRef = useRef(false);
+  const submitLockRef = useRef(false);
+
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     if (categories.length === 0) dispatch(fetchCategories());
     if (brands.length === 0) dispatch(fetchBrands());
-    dispatch(fetchVariantTemplates());
+    if (variantTemplates.length === 0) dispatch(fetchVariantTemplates());
 
     const loadProduct = async () => {
       try {
@@ -64,7 +69,7 @@ export default function EditProductPage() {
       }
     };
     loadProduct();
-  }, [dispatch, params.id, categories.length, brands.length]);
+  }, [dispatch, params.id, categories.length, brands.length, variantTemplates.length]);
 
   const activeTemplates = variantTemplates.filter(v => v.status === "active");
 
@@ -87,25 +92,24 @@ export default function EditProductPage() {
     return activeTemplates.find(t => t._id === templateId);
   };
 
-  const processSubmit = async () => {
-    setIsLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitLockRef.current || isLoading) return;
+
     setError("");
 
     if (!formData.name || !formData.categoryId) {
       setError("Name and Category are required");
-      setIsLoading(false);
       return;
     }
 
     for (let v of variants) {
       if (!v.variantTemplateId) {
         setError("Please select a variant template for all variants");
-        setIsLoading(false);
         return;
       }
       if (!v.price || !v.costPrice || !v.stock || !v.minStock) {
         setError("All pricing and stock fields are required");
-        setIsLoading(false);
         return;
       }
     }
@@ -113,7 +117,6 @@ export default function EditProductPage() {
     const templateIds = variants.map(v => v.variantTemplateId);
     if (new Set(templateIds).size !== templateIds.length) {
       setError("You cannot select the same variant template twice");
-      setIsLoading(false);
       return;
     }
 
@@ -137,6 +140,8 @@ export default function EditProductPage() {
       })
     };
 
+    submitLockRef.current = true;
+    setIsLoading(true);
     try {
       await dispatch(editProduct(params.id, payload));
       router.push("/products");
@@ -144,14 +149,8 @@ export default function EditProductPage() {
       setError(err);
     } finally {
       setIsLoading(false);
+      submitLockRef.current = false;
     }
-  };
-
-  const debouncedSubmit = useCallback(debounce(() => processSubmit(), 500), [dispatch, params.id, formData, variants]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    debouncedSubmit();
   };
 
   if (fetchLoading) {

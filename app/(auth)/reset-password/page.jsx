@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resetPassword as resetPasswordAction } from "@/store/actions/authActions";
-import { debounce } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,24 +21,9 @@ function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const submittingRef = useRef(false);
 
-  const processSubmit = async (passVal) => {
-    setIsLoading(true);
-    setError("");
-    try {
-      await resetPasswordAction(token, passVal);
-      setIsSuccess(true);
-      setTimeout(() => router.push("/login"), 2000);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to reset password");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const debouncedSubmit = useCallback(debounce((p) => processSubmit(p), 500), [token]);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!token) {
       setError("Invalid or missing reset token");
@@ -53,7 +37,20 @@ function ResetPasswordForm() {
       setError("Passwords do not match");
       return;
     }
-    debouncedSubmit(password);
+    if (submittingRef.current || isLoading) return;
+    submittingRef.current = true;
+    setIsLoading(true);
+    setError("");
+    try {
+      await resetPasswordAction(token, password);
+      setIsSuccess(true);
+      setTimeout(() => router.push("/login"), 2000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to reset password");
+    } finally {
+      setIsLoading(false);
+      submittingRef.current = false;
+    }
   };
 
   return (

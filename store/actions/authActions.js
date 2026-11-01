@@ -10,8 +10,11 @@ export const loginUser = (credentials) => async (dispatch) => {
       localStorage.setItem('user', JSON.stringify(data));
     }
     dispatch(loginSuccess(data));
+    return data;
   } catch (error) {
-    dispatch(loginFailure(error.response?.data?.message || error.message));
+    const message = error.response?.data?.message || error.message || 'Login failed';
+    dispatch(loginFailure(message));
+    throw error;
   }
 };
 

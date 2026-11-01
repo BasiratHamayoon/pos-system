@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { createProduct } from "@/store/actions/productActions";
 import { fetchCategories } from "@/store/actions/categoryActions";
 import { fetchBrands } from "@/store/actions/brandActions";
 import { fetchVariantTemplates } from "@/store/actions/variantTemplateActions";
-import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,11 +28,16 @@ export default function AddProductPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const initializedRef = useRef(false);
+  const submitLockRef = useRef(false);
+
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     if (categories.length === 0) dispatch(fetchCategories());
     if (brands.length === 0) dispatch(fetchBrands());
-    dispatch(fetchVariantTemplates());
-  }, [dispatch, categories.length, brands.length]);
+    if (variantTemplates.length === 0) dispatch(fetchVariantTemplates());
+  }, [dispatch, categories.length, brands.length, variantTemplates.length]);
 
   const activeTemplates = variantTemplates.filter(v => v.status === "active");
 
@@ -56,35 +60,31 @@ export default function AddProductPage() {
     return activeTemplates.find(t => t._id === templateId);
   };
 
-  const processSubmit = async () => {
-    setIsLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitLockRef.current || isLoading) return;
+
     setError("");
 
     if (!formData.name || !formData.categoryId) {
       setError("Name and Category are required");
-      setIsLoading(false);
       return;
     }
 
-    // Validate: each variant must have template + pricing + stock
     for (let v of variants) {
       if (!v.variantTemplateId) {
         setError("Please select a variant template for all variants");
-        setIsLoading(false);
         return;
       }
       if (!v.price || !v.costPrice || !v.stock || !v.minStock) {
         setError("All pricing and stock fields are required");
-        setIsLoading(false);
         return;
       }
     }
 
-    // Check for duplicate templates
     const templateIds = variants.map(v => v.variantTemplateId);
     if (new Set(templateIds).size !== templateIds.length) {
       setError("You cannot select the same variant template twice");
-      setIsLoading(false);
       return;
     }
 
@@ -107,6 +107,8 @@ export default function AddProductPage() {
       })
     };
 
+    submitLockRef.current = true;
+    setIsLoading(true);
     try {
       await dispatch(createProduct(payload));
       router.push("/products");
@@ -114,14 +116,8 @@ export default function AddProductPage() {
       setError(err);
     } finally {
       setIsLoading(false);
+      submitLockRef.current = false;
     }
-  };
-
-  const debouncedSubmit = useCallback(debounce(() => processSubmit(), 500), [dispatch, formData, variants]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    debouncedSubmit();
   };
 
   return (
@@ -214,7 +210,6 @@ export default function AddProductPage() {
                           </button>
                         )}
 
-                        {/* Variant Template Selection */}
                         <div className="flex items-end gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
                           <Layers className="h-4 w-4 text-primary mt-2 shrink-0" />
                           <div className="flex-1 space-y-1">
@@ -230,7 +225,6 @@ export default function AddProductPage() {
                           </div>
                         </div>
 
-                        {/* Pricing & Stock Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div className="space-y-1.5">
                             <Label className="text-[10px] font-bold text-muted-foreground">Sale Price *</Label>
@@ -256,7 +250,6 @@ export default function AddProductPage() {
                           </div>
                         </div>
 
-                        {/* Selected Template Preview */}
                         {selectedTemplate && (
                           <div className="flex flex-wrap gap-4 pt-3 border-t text-[11px] text-muted-foreground">
                             <span><strong className="text-foreground">Label:</strong> {selectedTemplate.label}</span>

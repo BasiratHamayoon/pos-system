@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { createBrand } from "@/store/actions/brandActions";
-import { debounce } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,18 +18,27 @@ export default function AddBrandPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const processSubmit = async (data) => {
-    setIsLoading(true);
+  const submitLockRef = useRef(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitLockRef.current || isLoading) return;
+
     setError("");
+
+    if (!formData.name) {
+      setError("Brand name is required");
+      return;
+    }
+
+    submitLockRef.current = true;
+    setIsLoading(true);
     try {
-      await dispatch(createBrand(data));
+      await dispatch(createBrand(formData));
       router.push("/brands");
     } catch (err) { setError(err); } 
-    finally { setIsLoading(false); }
+    finally { setIsLoading(false); submitLockRef.current = false; }
   };
-
-  const debouncedSubmit = useCallback(debounce((d) => processSubmit(d), 500), [dispatch]);
-  const handleSubmit = (e) => { e.preventDefault(); debouncedSubmit(formData); };
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto pb-10">

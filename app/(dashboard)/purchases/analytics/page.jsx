@@ -1,17 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { fetchPurchaseAnalytics } from "@/store/actions/analyticsActions";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar,
 } from "recharts";
 import { ArrowLeft, Truck, Wallet, Package, Factory, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function padMonthlyData(monthlyData) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const dataMap = new Map();
+
+  monthlyData.forEach((m) => {
+    const key = `${m.month}-${m.year}`;
+    dataMap.set(key, m);
+  });
+
+  const padded = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    const monthName = MONTH_NAMES[d.getMonth()];
+    const year = d.getFullYear();
+    const key = `${monthName}-${year}`;
+    const existing = dataMap.get(key);
+    padded.push(
+      existing || {
+        month: monthName,
+        year,
+        spent: 0,
+        paid: 0,
+        due: 0,
+        orders: 0,
+      }
+    );
+  }
+  return padded;
+}
 
 export default function PurchaseAnalyticsPage() {
   const router = useRouter();
@@ -31,6 +64,11 @@ export default function PurchaseAnalyticsPage() {
     };
     load();
   }, []);
+
+  const paddedMonthlyData = useMemo(() => {
+    if (!data?.monthlyData) return [];
+    return padMonthlyData(data.monthlyData);
+  }, [data]);
 
   if (isLoading) return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   if (!data) return <div className="text-center text-muted-foreground p-10">No purchase data available yet.</div>;
@@ -74,7 +112,7 @@ export default function PurchaseAnalyticsPage() {
             <CardHeader><CardTitle className="text-sm font-bold">Monthly Spending Trend</CardTitle></CardHeader>
             <CardContent className="h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.monthlyData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <AreaChart data={paddedMonthlyData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="spentGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="oklch(0.60 0.23 25)" stopOpacity={0.4} />
@@ -125,7 +163,7 @@ export default function PurchaseAnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y font-mono text-[13px]">
-                {data.monthlyData.map((m, i) => (
+                {paddedMonthlyData.map((m, i) => (
                   <tr key={i} className="hover:bg-accent/30">
                     <td className="px-4 py-3 font-sans font-bold">{m.month} {m.year}</td>
                     <td className="px-4 py-3 text-center">{m.orders}</td>
