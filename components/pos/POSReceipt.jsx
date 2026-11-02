@@ -72,9 +72,9 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
               {/* Left Customer Box */}
               <div className="w-[58%] border-r border-black flex flex-col">
                 {[
-                  { label: "INVOICE NO", value: invoice.invoiceNo },
+                  { label: "INVOICE NO", value: invoice.invoiceNo || invoice._id?.slice(-6).toUpperCase() },
                   { label: "PARTY CODE", value: invoice.shopkeeper ? String(invoice.shopkeeper).slice(-4) : "CASH" },
-                  { label: "PARTY NAME", value: invoice.shopName || invoice.shopkeeperName },
+                  { label: "PARTY NAME", value: invoice.shopName || invoice.shopkeeperName || "Walk-in Customer" },
                   { label: "ADDRESS", value: invoice.address || "Nowshehra Road" },
                   { label: "CONTACT #", value: invoice.phone || "" },
                   { label: "CNIC #", value: "" },
@@ -161,7 +161,7 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
               </div>
             </div>
 
-            {/* PAYMENT BREAKDOWN ROW (Paid vs Khata) */}
+            {/* PAYMENT BREAKDOWN ROW */}
             <div className="flex flex-row justify-between items-center mt-1 border-t border-b border-black py-1 text-[9.5px] font-bold text-black">
               <div className="flex items-center gap-2">
                 <span>PAYMENT:</span>
@@ -192,9 +192,11 @@ export default function POSReceipt({ open, onOpenChange, invoice, onPrint, onNew
           <Button onClick={onPrint} className="flex-1 h-10 text-xs font-bold rounded-xl gap-2 shadow-md shadow-primary/20">
             <Printer className="h-4 w-4" /> Print Receipt
           </Button>
-          <Button variant="outline" onClick={onNewSale} className="flex-1 h-10 text-xs font-bold rounded-xl gap-2">
-            <Plus className="h-4 w-4" /> New Transaction
-          </Button>
+          {onNewSale && (
+            <Button variant="outline" onClick={onNewSale} className="flex-1 h-10 text-xs font-bold rounded-xl gap-2">
+              <Plus className="h-4 w-4" /> New Transaction
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
