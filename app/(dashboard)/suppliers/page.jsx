@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Search, Plus, Factory, AlertTriangle, Trash2, Pencil, Truck, Wallet } from "lucide-react";
+import { Search, Plus, Factory, AlertTriangle, Trash2, Eye, Truck, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SuppliersPage() {
@@ -104,12 +104,15 @@ export default function SuppliersPage() {
                 {filteredSuppliers.map((supplier) => (
                   <tr key={supplier._id} className="hover:bg-accent/50 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs shrink-0">
+                      <div 
+                        className="flex items-center gap-3 cursor-pointer group"
+                        onClick={() => router.push(`/suppliers/${supplier._id}`)}
+                      >
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-xs shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                           {supplier.companyName.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold truncate">{supplier.companyName}</p>
+                          <p className="font-bold truncate group-hover:text-primary transition-colors">{supplier.companyName}</p>
                           <p className="text-[10px] text-muted-foreground">Rep: {supplier.name}</p>
                         </div>
                       </div>
@@ -128,10 +131,23 @@ export default function SuppliersPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => router.push(`/suppliers/${supplier._id}`)}>
-                          <Pencil className="h-4 w-4" />
+                        {/* Eye icon button for View Details */}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-primary hover:bg-primary/10" 
+                          title="View Details & History"
+                          onClick={() => router.push(`/suppliers/${supplier._id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm(supplier._id)}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10" 
+                          title="Delete Supplier"
+                          onClick={() => setDeleteConfirm(supplier._id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

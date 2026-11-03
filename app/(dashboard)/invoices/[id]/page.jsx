@@ -114,12 +114,10 @@ export default function InvoiceDetailPage() {
             print-color-adjust: exact !important;
           }
 
-          /* Hide all application UI */
           body * {
             visibility: hidden !important;
           }
 
-          /* Show only the invoice container */
           .printable-invoice-container,
           .printable-invoice-container * {
             visibility: visible !important;
@@ -174,19 +172,23 @@ export default function InvoiceDetailPage() {
           style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", lineHeight: "1.2" }}
         >
           <div className="flex flex-row justify-between items-start mb-2 w-full">
-            <div className="w-[50%]">
+            <div className="w-[58%]">
               <h1 className="text-[15px] font-bold tracking-tight mb-0.5 text-black">
-                Three Star Traders Charsadda
+                Abubakar Traders Charsadda
               </h1>
-              <p className="font-bold text-black text-[10px]">Peshawar Road Serdaryab Stop</p>
-              <p className="font-bold text-black text-[10px]">PH- 0313-9296448, 0300-5003923</p>
+              <p className="font-bold text-black text-[9.5px]">
+                Nowshera Road Near Tabeleghi Markaz Charsadda
+              </p>
+              <p className="font-bold text-black text-[9.5px]">
+                PH- 03189172417, 03429277709, 03139618834
+              </p>
             </div>
-            <div className="w-[20%] text-center pt-1">
+            <div className="w-[18%] text-center pt-1">
               <div className="border border-black px-3 py-0.5 font-bold tracking-[0.2em] text-[12px] text-black">
                 INVOICE
               </div>
             </div>
-            <div className="w-[30%] text-right text-[10px] font-bold text-black pt-4">
+            <div className="w-[24%] text-right text-[10px] font-bold text-black pt-4">
               <span>
                 Page. No : <span className="ml-4">1</span>
               </span>
@@ -202,7 +204,7 @@ export default function InvoiceDetailPage() {
                   value: invoice.shopkeeper ? String(invoice.shopkeeper).slice(-4) : "CASH",
                 },
                 { label: "PARTY NAME", value: invoice.shopName || invoice.shopkeeperName },
-                { label: "ADDRESS", value: invoice.address || "Nowshehra Road" },
+                { label: "ADDRESS", value: invoice.address || "Nowshera Road Charsadda" },
                 { label: "CONTACT #", value: invoice.phone || "" },
                 { label: "CNIC #", value: "" },
                 { label: "NTN/STRN #", value: "", noBorder: true },
